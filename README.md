@@ -4,6 +4,9 @@
 
 **出力した実データをサンプルとして、仕様不明な状態で仮実装しています。仕様が判明したら適宜修正してお使いください。**
 
+[![vci-logcat 紹介動画](https://img.youtube.com/vi/OUk8GqWlCkw/0.jpg)](https://www.youtube.com/watch?v=OUk8GqWlCkw)
+
+
 ## Installation
 
 - [Node.js](https://nodejs.org/) >= 10
