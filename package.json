@@ -1,0 +1,26 @@
+{
+  "name": "vci-logcat",
+  "version": "1.0.0",
+  "description": "VCI logcat",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./bin/vci-logcat -c ws://localhost:8080",
+    "test": "echo \"There is no test to run.\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oocytanb/vci-logcat"
+  },
+  "keywords": [
+    "vci"
+  ],
+  "author": "oO",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "~2.19.0",
+    "ws": "~6.1.4"
+  },
+  "bin": {
+    "vci-logcat": "./bin/vci-logcat"
+  }
+}
