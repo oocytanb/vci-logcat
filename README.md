@@ -37,7 +37,7 @@ npm install
     npm start
     ```
 
-    以下のコマンドと、等価です。
+    以下のコマンドと、同義です。
     接続先を指定すれば、任意のサーバーに接続可能です。
 
     ```
@@ -55,7 +55,7 @@ npm install
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch vci-logcat",
             "program": "${workspaceFolder}/bin/vci-logcat",
             "args": ["-c", "ws://localhost:8080"]
         }

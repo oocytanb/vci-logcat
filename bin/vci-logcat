@@ -10,8 +10,11 @@
 const program = require('commander');
 const readline = require('readline');
 const WebSocket = require('ws');
+const { StringDecoder } = require('string_decoder');
 
 const parseVciBlobMessage = Symbol('parseVciBlobMessage');
+const parseVciBlobMessageSyntax = Symbol('parseVciBlobMessageSyntax');
+const vciLogRecordElementToString = Symbol('vciLogRecordElementToString');
 
 const VciLogRecordType = {
   Unknown: Symbol('unknown'),
@@ -43,82 +46,14 @@ class VciLogRecord {
     this.parameterMap = parameterMap ? parameterMap : new Map();
   }
 
-  static controlCodeToString(cc, str = undefined) {
-    const p = '<' + (cc < 16 ? '0' : '') + cc.toString(16) + '>';
-    return str ? str + p : p;
+  static controlCodeToString(code) {
+    return '<' + (code < 16 ? '0' : '') + code.toString(16) + '>';
   }
 
-  static charCodeToString(cc, str = undefined) {
-    if (cc <= 0x1F) {
-      // 制御文字
-      return VciLogRecord.controlCodeToString(cc, str);
-    } else {
-      const p = String.fromCharCode(cc);
-      return str ? str + p : p;
-    }
+  static isPrintableCode(code) {
+    return (0x20 <= code && code <= 0x7E);
   }
 
-  static elementToString(element) {
-    switch (element.tag) {
-      case VciLogElementTag.Tag93:
-      case VciLogElementTag.Tag91:
-        return VciLogRecord.controlCodeToString(element.tag_num) + VciLogRecord.controlCodeToString(element.num);
-      case VciLogElementTag.Text:
-      case VciLogElementTag.Integer:
-        return String(element.text);
-      default:
-        return String(element.text);
-    }
-  }
-
-  toString() {
-    if (this.type === VciLogRecordType.Logger) {
-      let str = 'Log';
-
-      const timeString = this.parameterMap.get('UnixTime');
-      if (timeString !== undefined) {
-        const time = Number.parseInt(timeString, 10);
-        if (Number.isFinite(time)) {
-          const date = new Date(time * 1000);
-          str += ` | ${('0' + date.getHours()).slice(-2)}:${('0' + date.getMinutes()).slice(-2)}:${('0' + date.getSeconds()).slice(-2)}`;
-        }
-      }
-
-      const itemString = this.parameterMap.get('Item');
-      if (itemString !== undefined) {
-        str += ` | ${itemString}`;
-      }
-
-      const messageString = this.parameterMap.get('Message');
-      if (messageString !== undefined) {
-        str += ` | ${messageString}`;
-      }
-
-      return str;
-    } else {
-      // 不明な形式の場合は、すべての要素を文字列化する
-      let str = '';
-
-      for (let element of this.metaElements) {
-        str += (str ? ' | ' : '') + VciLogRecord.elementToString(element);
-      }
-  
-      for (let [key, value] of this.parameterMap) {
-        if (key === VciLogRecordParameterTextKey) {
-          str += (str ? ' | ' : '') + value;
-        } else {
-          str += (str ? ' | ' : '') + key + ' = ' + value;
-        }
-      }
-  
-      return str;
-    }
-  }
-
-  format(formatString) {
-    // 仮で toString() をそのまま返す。
-    return this.toString();
-  }
 
   /**
    * VCI のログのレコードをパースする。
@@ -158,6 +93,55 @@ class VciLogRecord {
       parameterMap.set(VciLogRecordParameterTextKey, `[Unsupported data type: ${typeof data}]`);
       return new VciLogRecord(VciLogRecordType.Unknown, parameterMap);
     }
+  }
+
+  toString() {
+    if (this.type === VciLogRecordType.Logger) {
+      let str = 'Log';
+
+      const timeString = this.parameterMap.get('UnixTime');
+      if (timeString !== undefined) {
+        const time = Number.parseInt(timeString, 10);
+        if (Number.isFinite(time)) {
+          const date = new Date(time * 1000);
+          str += ` | ${('0' + date.getHours()).slice(-2)}:${('0' + date.getMinutes()).slice(-2)}:${('0' + date.getSeconds()).slice(-2)}`;
+        }
+      }
+
+      const itemString = this.parameterMap.get('Item');
+      if (itemString !== undefined) {
+        str += ` | ${itemString}`;
+      }
+
+      const messageString = this.parameterMap.get('Message');
+      if (messageString !== undefined) {
+        str += ` | ${messageString}`;
+      }
+
+      return str;
+    } else {
+      // 不明な形式の場合は、すべての要素を文字列化する
+      let str = '';
+
+      for (let element of this.metaElements) {
+        str += (str ? ' | ' : '') + VciLogRecord[vciLogRecordElementToString](element);
+      }
+  
+      for (let [key, value] of this.parameterMap) {
+        if (key === VciLogRecordParameterTextKey) {
+          str += (str ? ' | ' : '') + value;
+        } else {
+          str += (str ? ' | ' : '') + key + ' = ' + value;
+        }
+      }
+  
+      return str;
+    }
+  }
+
+  format(formatString) {
+    // 仮で toString() をそのまま返す。
+    return this.toString();
   }
 
   /**
@@ -202,7 +186,7 @@ class VciLogRecord {
       if (cc >= 0x7F) {
         ++ pos;
         if (pos >= end) {
-          return {tag: VciLogElementTag.Unknown, tag_num: cc, text: VciLogRecord.charCodeToString(cc), num: Number.NaN};
+          return {tag: VciLogElementTag.Unknown, tag_num: cc, text: VciLogRecord.controlCodeToString(cc), num: Number.NaN};
         }
 
         // VCI ログの要素情報として扱う
@@ -215,42 +199,65 @@ class VciLogRecord {
           const num = parseNumberComponent(cc - 0xcb);
           return {tag: VciLogElementTag.Integer, tag_num: cc, text: String(num), num: num};
         } else if (0xa0 <= cc && cc <= 0xbf) {
-          // 0xa0 から 0xbf までの場合は、0xa0 を引いた値を文字列サイズとして扱う。 (仮)
-          const text = parseStringComponent(cc - 0xa0);
+          // 0xa0 から 0xbf までの場合は、0xa0 を引いた値をテキストサイズとして扱う。 (仮)
+          const text = parseTextComponent(cc - 0xa0);
           return {tag: VciLogElementTag.Text, tag_num: cc, text: text, num: Number.NaN};
         } else if (0xd9 == cc) {
-          // 0xd9 の場合は、次の１バイトを、文字列サイズとして扱う。 (仮)
+          // 0xd9 の場合は、次の１バイトを、テキストサイズとして扱う。 (仮)
           const stringSize = data[pos];
           ++ pos;
-          const text = parseStringComponent(stringSize);
+          const text = parseTextComponent(stringSize);
           return {tag: VciLogElementTag.Text, tag_num: cc, text: text, num: Number.NaN};
         } else {
-          // それ以外の場合は、末尾まで文字列として扱う。 (仮)
-          const text = parseStringComponent();
+          // それ以外の場合は、末尾までを不明な形式として文字列化する。 (仮)
+          const text = parseUnformedComponent();
           return {tag: VciLogElementTag.Text, tag_num: cc, text: text, num: Number.NaN};
         }
       } else {
-        // その他の場合は、文字列として扱う。
-        const text = parseStringComponent();
+        // その他の場合は、全体を不明な形式として文字列化する。 (仮)
+        const text = parseUnformedComponent();
         return {tag: VciLogElementTag.Text, tag_num: 0, text: text, num: Number.NaN};
       }
     }
 
-    function parseStringComponent(size = undefined) {
+    function parseUnformedComponent(size = undefined) {
       if (size === undefined) {
         size = end - pos;
       }
 
       let str = '';
+      let controlFlag = false;
       for (let i = 0; i < size; ++i) {
         if (pos >= end) {
           break;
         }
 
         let cc = data[pos];
-        str = VciLogRecord.charCodeToString(cc, str);
+        
+        if (VciLogRecord.isPrintableCode(cc)) {
+          if (controlFlag) {
+            str += ' ';
+          }
+          str += String.fromCharCode(cc);
+          controlFlag = false;
+        } else {
+          if (str) {
+            str += ' ';
+          }
+          str += VciLogRecord.controlCodeToString(cc);
+          controlFlag = true;
+        }
+      
         ++pos;
       }
+      return str;
+    }
+
+    function parseTextComponent(size = undefined) {
+      const sliceEnd = (size === undefined) ? end : Math.min(pos + size, end);
+      const decoder = new StringDecoder('utf8');
+      const str = decoder.end(data.slice(pos, sliceEnd));
+      pos = sliceEnd;
       return str;
     }
 
@@ -268,51 +275,64 @@ class VciLogRecord {
       return num;
     }
 
-    function parseSyntax(elements) {
-      if (elements.length < 2 || elements[0].tag !== VciLogElementTag.Tag93 && elements[1].text != 'logger') {
-        // 不明なデータ形式の場合は、文字列化する。
-        let text = '';
-        for (let entry of elements) {
-          text += (text ? ' ' : '') + VciLogRecord.elementToString(entry);
-        }
-
-        let parameterMap = new Map();
-        parameterMap.set(VciLogRecordParameterTextKey);
-        return new VciLogRecord(VciLogRecordType.Unknown, parameterMap);
-      } else {
-        // VCI ログデータの形式として扱う
-        let parameterMap = new Map();
-        let metaElements = [];
-
-        // メタデータ (仮) を処理
-        let index = 0;
-        for (; index < elements.length; ++index) {
-          const entry = elements[index];
-          metaElements.push(entry);
-          if (entry.tag === VciLogElementTag.Tag91) {
-            ++index;
-            break;
-          }
-        }
-
-        // ログ本文 (仮) を処理
-        while (index < elements.length) {
-          const keyText = VciLogRecord.elementToString(elements[index ++]);
-          const valueText = (index < elements.length) ? VciLogRecord.elementToString(elements[index ++]) : '';
-          parameterMap.set(keyText, valueText);
-        }
-
-        return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaElements);
-      }
-    }
-
     //
     {
       let elements = [];
       while (pos < end) {
         elements.push(parseElement());
       }
-      return parseSyntax(elements);
+      return this[parseVciBlobMessageSyntax](elements);
+    }
+  }
+
+  static [parseVciBlobMessageSyntax](elements) {
+    if (elements.length < 2 || elements[0].tag !== VciLogElementTag.Tag93 && elements[1].text != 'logger') {
+      // 不明なデータ形式の場合は、文字列化する。
+      let text = '';
+      for (let entry of elements) {
+        text += (text ? ' ' : '') + this[vciLogRecordElementToString](entry);
+      }
+
+      let parameterMap = new Map();
+      parameterMap.set(VciLogRecordParameterTextKey, text);
+      return new VciLogRecord(VciLogRecordType.Unknown, parameterMap);
+    } else {
+      // VCI ログデータの形式として扱う
+      let parameterMap = new Map();
+      let metaElements = [];
+
+      // メタデータ (仮) を処理
+      let index = 0;
+      for (; index < elements.length; ++index) {
+        const entry = elements[index];
+        metaElements.push(entry);
+        if (entry.tag === VciLogElementTag.Tag91) {
+          ++index;
+          break;
+        }
+      }
+
+      // ログ本文 (仮) を処理
+      while (index < elements.length) {
+        const keyText = this[vciLogRecordElementToString](elements[index ++]);
+        const valueText = (index < elements.length) ? this[vciLogRecordElementToString](elements[index ++]) : '';
+        parameterMap.set(keyText, valueText);
+      }
+
+      return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaElements);
+    }
+  }
+
+  static [vciLogRecordElementToString](element) {
+    switch (element.tag) {
+      case VciLogElementTag.Tag93:
+      case VciLogElementTag.Tag91:
+        return this.controlCodeToString(element.tag_num) + this.controlCodeToString(element.num);
+      case VciLogElementTag.Text:
+      case VciLogElementTag.Integer:
+        return String(element.text);
+      default:
+        return String(element.text);
     }
   }
 }
