@@ -1,11 +1,12 @@
 {
   "name": "vci-logcat",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "VCI logcat",
   "main": "index.js",
   "scripts": {
     "start": "node ./bin/vci-logcat -c ws://localhost:8080",
-    "test": "echo \"There is no test to run.\""
+    "test": "echo \"There is no test to run.\"",
+    "lint": "eslint ./bin/*"
   },
   "repository": {
     "type": "git",
@@ -22,5 +23,13 @@
   },
   "bin": {
     "vci-logcat": "./bin/vci-logcat"
+  },
+  "devDependencies": {
+    "eslint": "^5.15.1",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-plugin-import": "^2.16.0",
+    "eslint-plugin-node": "^8.0.1",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-standard": "^4.0.0"
   }
 }
