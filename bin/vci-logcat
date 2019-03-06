@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /*
- * Copyright (c) 2019 oO (https://github.com/oocytanb).
+ * Copyright (c) 2019 oO (https://github.com/oocytanb)
  * MIT Licensed
  *
  * **出力した実データをサンプルとして、仕様不明な状態で仮実装しています。仕様が判明したら適宜修正してお使いください。**
@@ -37,8 +37,8 @@ function controlCodeToString (code) {
   return '<' + (code < 16 ? '0' : '') + code.toString(16) + '>'
 }
 
-function isPrintableCode (code) {
-  return (code >= 0x20 && code <= 0x7E)
+function isPrintableOrWhitespace (code) {
+  return (code >= 0x20 && code <= 0x7E) || (code >= 0x09 && code <= 0x0D)
 }
 
 /**
@@ -366,7 +366,7 @@ class VciLogRecordParser {
     let controlFlag = false
     while (!this.reader.done && count < size) {
       const cc = this.reader.next()
-      if (isPrintableCode(cc)) {
+      if (isPrintableOrWhitespace(cc)) {
         if (controlFlag) {
           str += ' '
         }
@@ -404,10 +404,19 @@ program
   .usage('[options]')
   .option('-c, --connect <url>', 'connect to VCI WebSocket console (Default: ws://localhost:8080)')
   .option('-f, --format <format>', 'output format (default | json_record | full_text)')
+  .option('-A, --all-warnings', 'output all the warnings such as "script not return"')
   .parse(process.argv);
 
 (url => {
-  const logFormat = program.format || VciLogRecord.FormatType.Default
+  let logFormat
+  if (program.format) {
+    const formatOption = program.format.toLowerCase()
+    const formatTypes = Object.values(VciLogRecord.FormatType)
+    const formatIndex = formatTypes.indexOf(formatOption)
+    logFormat = formatIndex >= 0 ? formatTypes[formatIndex] : VciLogRecord.FormatType.Default
+  } else {
+    logFormat = VciLogRecord.FormatType.Default
+  }
 
   const rl = readline.createInterface({ input: process.stdin })
 
@@ -430,7 +439,14 @@ program
 
   ws.on('message', data => {
     const record = VciLogRecordParser.parse(data)
-    console.log(record.format(logFormat))
+
+    // TODO フィルター処理を実装
+    const outputLog = !!program.allWarnings ||
+                      !(record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') === 'System' && /frame:\s+script\s+not\s+return/.test(record.parameterMap.get('Message'))) // 'frame: script not return' メッセージを無視する
+
+    if (outputLog) {
+      console.log(record.format(logFormat))
+    }
   })
 
   rl.on('close', () => {
