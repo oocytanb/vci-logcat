@@ -73,7 +73,7 @@ class VciLogRecord {
       case VciLogRecord.ElementTag.Integer:
         return String(element.text)
       default:
-        return String(element.text)
+        return (element.tag_num ? controlCodeToString(element.tag_num) + ' ' : '') + String(element.text)
     }
   }
 
@@ -322,7 +322,7 @@ class VciLogRecordParser {
     }
 
     let cc = this.reader.peek()
-    if (cc >= 0x7F) {
+    if (cc <= 0x1F || cc >= 0x7F) {
       this.reader.next()
       if (this.reader.done) {
         return { tag: VciLogRecord.ElementTag.Unknown, tag_num: cc, text: controlCodeToString(cc), num: Number.NaN }
@@ -331,27 +331,36 @@ class VciLogRecordParser {
       // VCI ログの要素情報として扱う
       if (cc === 0x93 || cc === 0x91) {
         const tag = (cc === 0x93) ? VciLogRecord.ElementTag.Tag93 : VciLogRecord.ElementTag.Tag91
-        const num = this._parseNumberComponent(1)
-        return { tag: tag, tag_num: cc, text: String(num), num: num }
+        const nc = this._parseNumberComponent(1)
+        return { tag: tag, tag_num: cc, text: nc.text, num: nc.num }
       } else if (cc >= 0xcc && cc <= 0xcf) {
         // 0xcc から 0xcf までの場合は、1 から 4 バイトの数値として扱う。 (仮)
-        const num = this._parseNumberComponent(cc - 0xcb)
-        return { tag: VciLogRecord.ElementTag.Integer, tag_num: cc, text: String(num), num: num }
+        const nc = this._parseNumberComponent(cc - 0xcb)
+        if (!Number.isFinite(nc.num)) {
+          // 途中で終端に達したため、不明な形式とする。
+          return { tag: VciLogRecord.ElementTag.Unknown, tag_num: cc, text: nc.text, num: Number.NaN }
+        }
+        return { tag: VciLogRecord.ElementTag.Integer, tag_num: cc, text: nc.text, num: nc.num }
       } else if (cc >= 0xa0 && cc <= 0xbf) {
         // 0xa0 から 0xbf までの場合は、0xa0 を引いた値をテキストサイズとして扱う。 (仮)
         const text = this.reader.readString(cc - 0xa0)
         return { tag: VciLogRecord.ElementTag.Text, tag_num: cc, text: text, num: Number.NaN }
-      } else if (cc === 0xd9) {
-        // 0xd9 の場合は、次の１バイトを、テキストサイズとして扱う。 (仮)
-        const text = this.reader.readString(this.reader.next())
+      } else if (cc >= 0xd9 && cc <= 0xda) {
+        // 0xd9 から 0xda の場合は、続く １ から 2 バイトを、テキストサイズとして扱う。 (仮)
+        const nc = this._parseNumberComponent(cc - 0xd8)
+        if (!Number.isFinite(nc.num)) {
+          // 途中で終端に達したため、不明な形式とする。
+          return { tag: VciLogRecord.ElementTag.Unknown, tag_num: cc, text: nc.text, num: Number.NaN }
+        }
+        const text = this.reader.readString(nc.num)
         return { tag: VciLogRecord.ElementTag.Text, tag_num: cc, text: text, num: Number.NaN }
       } else {
         // それ以外の場合は、末尾までを不明な形式として文字列化する。 (仮)
-        const text = this._parseUnformedComponent()
-        return { tag: VciLogRecord.ElementTag.Text, tag_num: cc, text: text, num: Number.NaN }
+        const text = controlCodeToString(cc) + ' ' + this._parseUnformedComponent()
+        return { tag: VciLogRecord.ElementTag.Text, tag_num: 0, text: text, num: Number.NaN }
       }
     } else {
-      // その他の場合は、全体を不明な形式として文字列化する。 (仮)
+      // それ以外の場合は、全体を不明な形式として文字列化する。 (仮)
       const text = this._parseUnformedComponent()
       return { tag: VciLogRecord.ElementTag.Text, tag_num: 0, text: text, num: Number.NaN }
     }
@@ -385,16 +394,20 @@ class VciLogRecordParser {
   }
 
   _parseNumberComponent (size) {
-    // バイトオーダーが不明なため、ネットワークバイトオーダーとして扱う。 (仮)
+    // ネットワークバイトオーダーとして扱う。 (仮)
     let num = 0
+    let bytes = []
     for (let i = 0; i < size; ++i) {
       if (this.reader.done) {
-        break
+        // 途中で終端に達したため、不明な形式とする。
+        return { num: Number.NaN, text: bytes.map(controlCodeToString).join(' ') }
       }
-
-      num = (num << 8) | this.reader.next()
+      const cc = this.reader.next()
+      bytes.push(cc)
+      num = (num << 8) | cc
     }
-    return num
+
+    return { num: num, text: String(num) }
   }
 }
 
