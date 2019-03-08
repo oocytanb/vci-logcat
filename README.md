@@ -73,6 +73,8 @@ MIT License
 
 - [ws](https://github.com/websockets/ws)
 - [wscat](https://github.com/websockets/wscat)
+- [msgpack5](https://github.com/mcollina/msgpack5)
+- [bl](https://github.com/rvagg/bl)
 - [commander.js](https://github.com/tj/commander.js)
 - [ESLint](https://eslint.org/)
 - [eslint-config-standard](https://github.com/standard/eslint-config-standard)

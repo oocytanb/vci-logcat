@@ -12,7 +12,8 @@
 const program = require('commander')
 const readline = require('readline')
 const WebSocket = require('ws')
-const { StringDecoder } = require('string_decoder')
+const BufferList = require('bl')
+const msgpack = require('msgpack5')()
 
 const VciLogRecordType = Object.freeze({
   Unknown: 'unknown',
@@ -48,7 +49,7 @@ class VciLogRecord {
   /**
    * @param type {VciLogRecord.RecordType} レコードのタイプ。
    * @param parameterMap {Map} キーペア形式のパラメーターオブジェクト。
-   * @param metaElements {Object[]} メタ要素の配列。
+   * @param metaElements {Array} メタ要素の配列。
    */
   constructor (type, parameterMap, metaElements = undefined) {
     this.type = type
@@ -63,19 +64,6 @@ class VciLogRecord {
   static get TextParameterKey () { return '__vci_logcat_text_parameter' }
 
   static get FormatType () { return VciLogFormatType }
-
-  static elementToString (element) {
-    switch (element.tag) {
-      case VciLogRecord.ElementTag.Tag93:
-      case VciLogRecord.ElementTag.Tag91:
-        return controlCodeToString(element.tag_num) + controlCodeToString(element.num)
-      case VciLogRecord.ElementTag.Text:
-      case VciLogRecord.ElementTag.Integer:
-        return String(element.text)
-      default:
-        return (element.tag_num ? controlCodeToString(element.tag_num) + ' ' : '') + String(element.text)
-    }
-  }
 
   toString () {
     return this.format(VciLogRecord.FormatType.Default)
@@ -136,17 +124,13 @@ class VciLogRecord {
 
     return JSON.stringify({
       type: this.type,
-      meta_list: this.metaElements.map(element => VciLogRecord.elementToString(element)),
+      meta_list: this.metaElements,
       parameters: parameters
     })
   }
 
   _formatFullText () {
-    let str = ''
-
-    for (let element of this.metaElements) {
-      str += (str ? ' | ' : '') + VciLogRecord.elementToString(element)
-    }
+    let str = JSON.stringify(this.metaElements)
 
     for (let [key, value] of this.parameterMap) {
       if (key === VciLogRecord.TextParameterKey) {
@@ -160,67 +144,18 @@ class VciLogRecord {
   }
 }
 
-class LexReader {
-  /**
-   * @param data {Uint8Array} ログのバイナリデータ。
-   */
-  constructor (data) {
-    if (!data || !Number.isFinite(data.length)) {
-      throw new TypeError(`Invalid data type: ${typeof data}`)
-    }
-    this.data = data
-
-    this.pos = 0
-    this.end = data.length
-  }
-
-  get done () {
-    return this.pos >= this.end
-  }
-
-  next () {
-    if (this.done) {
-      return undefined
-    }
-
-    const cc = this.data[this.pos]
-    ++this.pos
-    return cc
-  }
-
-  peek () {
-    return this.done ? undefined : this.data[this.pos]
-  }
-
-  readString (size = undefined, encoding = 'utf8') {
-    if (size < 0) {
-      throw new RangeError('INDEX_OUT_OF_RANGE: size < 0')
-    }
-
-    if (this.done) {
-      return undefined
-    }
-
-    const sliceEnd = (size === undefined) ? this.end : Math.min(this.pos + size, this.end)
-    const decoder = new StringDecoder(encoding)
-    const str = decoder.end(this.data.slice(this.pos, sliceEnd))
-    this.pos = sliceEnd
-    return str
-  }
-}
-
 class VciLogRecordParser {
   /**
-   * @param reader {LexReader} ログデータのリーダー。
+   * @param buffer {Buffer|BufferList} ログデータのバッファー。
    */
-  constructor (reader) {
-    this.reader = reader
+  constructor (buffer) {
+    this.bl = buffer instanceof BufferList ? buffer : new BufferList().append(buffer)
   }
 
   /**
    * VCI のログのレコードをパースする。
    *
-   * @param data {{String|Buffer|ArrayBuffer} ws.on('message') で受信したデータを指定する。
+   * @param data {String|Buffer|ArrayBuffer} ws.on('message') で受信したデータを指定する。
    *
    * return {VciLogRecord} パース結果のレコードオブジェクトを返す。
    */
@@ -230,26 +165,17 @@ class VciLogRecordParser {
       parameterMap.set(VciLogRecord.TextParameterKey, data)
       return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
     } else if (data instanceof Buffer) {
-      return new VciLogRecordParser(new LexReader(data)).exec()
+      return new VciLogRecordParser(data).exec()
     } else if (data instanceof ArrayBuffer) {
-      return new VciLogRecordParser(new LexReader(new Uint8Array(data))).exec()
+      return new VciLogRecordParser(Buffer.from(data)).exec()
     } else if (Array.isArray(data)) {
-      let totalSize = 0
+      let bl = new BufferList()
       for (let entry of data) {
         if (entry instanceof Buffer) {
-          totalSize += entry.length
+          bl.append(entry)
         }
       }
-
-      let totalBuffer = Buffer.allocUnsafe(totalSize)
-      let destOffset = 0
-      for (let entry of data) {
-        if (entry instanceof Buffer) {
-          entry.copy(totalBuffer, destOffset)
-          destOffset += entry.length
-        }
-      }
-      return new VciLogRecordParser(new LexReader(totalBuffer)).exec()
+      return new VciLogRecordParser(bl).exec()
     } else {
       let parameterMap = new Map()
       parameterMap.set(VciLogRecord.TextParameterKey, `[Unsupported data type: ${typeof data}]`)
@@ -264,117 +190,40 @@ class VciLogRecordParser {
    */
   exec () {
     //
-    let elements = []
-    while (!this.reader.done) {
-      elements.push(this._parseElement())
-    }
-
-    //
-    if (elements.length < 2 || (elements[0].tag !== VciLogRecord.ElementTag.Tag93 && elements[1].text !== 'logger')) {
-      // 不明なデータ形式の場合は、文字列化する。
-      let text = ''
-      for (let entry of elements) {
-        text += (text ? ' ' : '') + VciLogRecord.elementToString(entry)
+    try {
+      let root = msgpack.decode(this.bl.duplicate())
+      if (!(root instanceof Array) || root.length < 2 || root[1] !== 'logger') {
+        // 不明なデータ形式
+        return this._unformedRecord()
       }
 
-      let parameterMap = new Map()
-      parameterMap.set(VciLogRecord.TextParameterKey, text)
-      return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
-    } else {
-      // VCI ログデータの形式として扱う
-      let parameterMap = new Map()
-      let metaElements = []
-
-      // メタデータ (仮) を処理
-      let index = 0
-      for (; index < elements.length; ++index) {
-        const entry = elements[index]
-        metaElements.push(entry)
-        if (entry.tag === VciLogRecord.ElementTag.Tag91) {
-          ++index
-          break
+      if (root instanceof Array &&
+          root.length >= 3 && root[1] === 'logger' &&
+          root[2] instanceof Array) {
+        // VCI ログデータの形式として扱う
+        let parameterMap = new Map()
+        const nodeList = root[2]
+        if (nodeList.length >= 1) {
+          const parametersNode = nodeList[0]
+          if (typeof parametersNode === 'object') {
+            for (let key in parametersNode) {
+              parameterMap.set(key, parametersNode[key])
+            }
+          }
         }
+        let metaElements = root.slice(0, 2)
+        return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaElements)
       }
-
-      // ログ本文 (仮) を処理
-      while (index < elements.length) {
-        const keyText = VciLogRecord.elementToString(elements[index++])
-        const valueText = (index < elements.length) ? VciLogRecord.elementToString(elements[index++]) : ''
-        parameterMap.set(keyText, valueText)
-      }
-
-      return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaElements)
+    } catch (error) {
+      return this._unformedRecord()
     }
   }
 
-  /**
-   * ログの要素をパースする。
-   *
-   * return {Object}
-   *          - tag: {VciLogRecord.ElementTag} タグ。
-   *          - tag_num: {Number} タグ番号。
-   *          - text: {String} 文字列化された内容。
-   *          - num: {Number} 数値化された内容。
-   */
-  _parseElement () {
-    if (this.reader.done) {
-      return { tag: VciLogRecord.ElementTag.Unknown, tag_num: 0, text: '', num: Number.NaN }
-    }
-
-    let cc = this.reader.peek()
-    if (cc <= 0x1F || cc >= 0x7F) {
-      this.reader.next()
-      if (this.reader.done) {
-        return { tag: VciLogRecord.ElementTag.Unknown, tag_num: cc, text: controlCodeToString(cc), num: Number.NaN }
-      }
-
-      // VCI ログの要素情報として扱う
-      if (cc === 0x93 || cc === 0x91) {
-        const tag = (cc === 0x93) ? VciLogRecord.ElementTag.Tag93 : VciLogRecord.ElementTag.Tag91
-        const nc = this._parseNumberComponent(1)
-        return { tag: tag, tag_num: cc, text: nc.text, num: nc.num }
-      } else if (cc >= 0xcc && cc <= 0xcf) {
-        // 0xcc から 0xcf までの場合は、1 から 4 バイトの数値として扱う。 (仮)
-        const nc = this._parseNumberComponent(cc - 0xcb)
-        if (!Number.isFinite(nc.num)) {
-          // 途中で終端に達したため、不明な形式とする。
-          return { tag: VciLogRecord.ElementTag.Unknown, tag_num: cc, text: nc.text, num: Number.NaN }
-        }
-        return { tag: VciLogRecord.ElementTag.Integer, tag_num: cc, text: nc.text, num: nc.num }
-      } else if (cc >= 0xa0 && cc <= 0xbf) {
-        // 0xa0 から 0xbf までの場合は、0xa0 を引いた値をテキストサイズとして扱う。 (仮)
-        const text = this.reader.readString(cc - 0xa0)
-        return { tag: VciLogRecord.ElementTag.Text, tag_num: cc, text: text, num: Number.NaN }
-      } else if (cc >= 0xd9 && cc <= 0xda) {
-        // 0xd9 から 0xda の場合は、続く １ から 2 バイトを、テキストサイズとして扱う。 (仮)
-        const nc = this._parseNumberComponent(cc - 0xd8)
-        if (!Number.isFinite(nc.num)) {
-          // 途中で終端に達したため、不明な形式とする。
-          return { tag: VciLogRecord.ElementTag.Unknown, tag_num: cc, text: nc.text, num: Number.NaN }
-        }
-        const text = this.reader.readString(nc.num)
-        return { tag: VciLogRecord.ElementTag.Text, tag_num: cc, text: text, num: Number.NaN }
-      } else {
-        // それ以外の場合は、末尾までを不明な形式として文字列化する。 (仮)
-        const text = controlCodeToString(cc) + ' ' + this._parseUnformedComponent()
-        return { tag: VciLogRecord.ElementTag.Text, tag_num: 0, text: text, num: Number.NaN }
-      }
-    } else {
-      // それ以外の場合は、全体を不明な形式として文字列化する。 (仮)
-      const text = this._parseUnformedComponent()
-      return { tag: VciLogRecord.ElementTag.Text, tag_num: 0, text: text, num: Number.NaN }
-    }
-  }
-
-  _parseUnformedComponent (size = undefined) {
-    if (size === undefined) {
-      size = Number.MAX_SAFE_INTEGER
-    }
-    let count = 0
+  _unformedRecord () {
     let str = ''
     let controlFlag = false
-    while (!this.reader.done && count < size) {
-      const cc = this.reader.next()
+    for (let i = 0, len = this.bl.length; i < len; ++i) {
+      const cc = this.bl.get(i)
       if (isPrintableOrWhitespace(cc)) {
         if (controlFlag) {
           str += ' '
@@ -388,26 +237,11 @@ class VciLogRecordParser {
         str += controlCodeToString(cc)
         controlFlag = true
       }
-      ++count
-    }
-    return str
-  }
-
-  _parseNumberComponent (size) {
-    // ネットワークバイトオーダーとして扱う。 (仮)
-    let num = 0
-    let bytes = []
-    for (let i = 0; i < size; ++i) {
-      if (this.reader.done) {
-        // 途中で終端に達したため、不明な形式とする。
-        return { num: Number.NaN, text: bytes.map(controlCodeToString).join(' ') }
-      }
-      const cc = this.reader.next()
-      bytes.push(cc)
-      num = (num << 8) | cc
     }
 
-    return { num: num, text: String(num) }
+    let parameterMap = new Map()
+    parameterMap.set(VciLogRecord.TextParameterKey, str)
+    return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
   }
 }
 
