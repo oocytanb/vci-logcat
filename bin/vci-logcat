@@ -20,19 +20,13 @@ const VciLogRecordType = Object.freeze({
   Logger: 'logger'
 })
 
-const VciLogElementTag = Object.freeze({
-  Unknown: 'unknown',
-  Tag93: 'tag_93',
-  Tag91: 'tag_91',
-  Text: 'text',
-  Integer: 'integer'
-})
-
 const VciLogFormatType = Object.freeze({
   Default: 'default',
   JsonRecord: 'json_record',
   FullText: 'full_text'
 })
+
+const parseVciLogRecord = Symbol('parseVciLogRecord')
 
 function controlCodeToString (code) {
   return '<' + (code < 16 ? '0' : '') + code.toString(16) + '>'
@@ -49,21 +43,131 @@ class VciLogRecord {
   /**
    * @param type {VciLogRecord.RecordType} レコードのタイプ。
    * @param parameterMap {Map} キーペア形式のパラメーターオブジェクト。
-   * @param metaElements {Array} メタ要素の配列。
+   * @param metaList {Array} メタ要素の配列。
    */
-  constructor (type, parameterMap, metaElements = undefined) {
+  constructor (type, parameterMap, metaList = undefined) {
     this.type = type
-    this.metaElements = metaElements || []
+    this.metaList = metaList || []
     this.parameterMap = parameterMap || new Map()
   }
 
   static get RecordType () { return VciLogRecordType }
 
-  static get ElementTag () { return VciLogElementTag }
-
   static get TextParameterKey () { return '__vci_logcat_text_parameter' }
 
   static get FormatType () { return VciLogFormatType }
+
+  /**
+   * VCI のログのレコードをパースする。
+   *
+   * @param data {String|Buffer|ArrayBuffer} ws.on('message') で受信したデータを指定する。
+   *
+   * return {VciLogRecord} パース結果のオブジェクトを返す。
+   */
+  static parse (data) {
+    if (data instanceof String || typeof data === 'string') {
+      let parameterMap = new Map()
+      parameterMap.set(VciLogRecord.TextParameterKey, data)
+      return new this(VciLogRecordType.Unknown, parameterMap)
+    } else if (data instanceof Buffer) {
+      return this[parseVciLogRecord](data)
+    } else if (data instanceof ArrayBuffer) {
+      return this[parseVciLogRecord](Buffer.from(data))
+    } else if (Array.isArray(data)) {
+      let bl = new BufferList()
+      for (let entry of data) {
+        if (entry instanceof Buffer) {
+          bl.append(entry)
+        }
+      }
+      return this[parseVciLogRecord](bl)
+    } else {
+      let parameterMap = new Map()
+      parameterMap.set(VciLogRecord.TextParameterKey, `[Unsupported data type: ${typeof data}]`)
+      return new this(VciLogRecordType.Unknown, parameterMap)
+    }
+  }
+
+  /**
+   * ログレコードのパースを実行する。
+   *
+   * print() ログのサンプルデータ:
+   * ```
+   * [
+   *   2,
+   *   logger,
+   *   [
+   *     {
+   *       "UnixTime": "1550923200",
+   *       "Category": "Item_Print",
+   *       "LogLevel": "Debug",
+   *       "Item": "ITEM_NAME",
+   *       "Message": "write {Application.persistentDataPath}/EmbeddedScriptWorkspace/ITEM_NAME/_main.lua",
+   *       "CallerFile": "C:\ProgramData\Jenkins\workspace\vrlive-client\Build_Bundle\VRLive\Assets\VRM\VCI-Embedded-Script\Scripts\EmbeddedScriptUnitySide.cs",
+   *       "CallerLine": 262,
+   *       "CallerMember": "_NewItem"
+   *     }
+   *   ]
+   * ]
+   * ```
+   *
+   * @param bl {Buffer | BufferList} ログデータのバッファー。
+   *
+   * return {VciLogRecord} パース結果のオブジェクトを返す。
+   */
+  static [parseVciLogRecord] (buffer) {
+    const bl = (buffer instanceof BufferList) ? buffer : new BufferList().append(buffer)
+
+    //
+    try {
+      let root = msgpack.decode(bl.duplicate())
+
+      if (root instanceof Array &&
+          root.length >= 3 && root[1] === 'logger' &&
+          root[2] instanceof Array) {
+        // VCI ログデータの形式として扱う
+        let parameterMap = new Map()
+        const nodeList = root[2]
+        if (nodeList.length >= 1) {
+          const parametersNode = nodeList[0]
+          if (typeof parametersNode === 'object') {
+            for (let key in parametersNode) {
+              parameterMap.set(key, parametersNode[key])
+            }
+          }
+        }
+        let metaList = root.slice(0, 2)
+        return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaList)
+      }
+    } catch (error) {
+    }
+
+    // 不明なデータ形式
+    {
+      let str = ''
+      let controlFlag = false
+      for (let i = 0, len = bl.length; i < len; ++i) {
+        const cc = bl.get(i)
+        if (isPrintableOrWhitespace(cc)) {
+          if (controlFlag) {
+            str += ' '
+          }
+          str += String.fromCharCode(cc)
+          controlFlag = false
+        } else {
+          if (str) {
+            str += ' '
+          }
+          str += controlCodeToString(cc)
+          controlFlag = true
+        }
+      }
+
+      let parameterMap = new Map()
+      parameterMap.set(VciLogRecord.TextParameterKey, str)
+      return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
+    }
+  }
 
   toString () {
     return this.format(VciLogRecord.FormatType.Default)
@@ -124,13 +228,13 @@ class VciLogRecord {
 
     return JSON.stringify({
       type: this.type,
-      meta_list: this.metaElements,
+      meta_list: this.metaList,
       parameters: parameters
     })
   }
 
   _formatFullText () {
-    let str = JSON.stringify(this.metaElements)
+    let str = JSON.stringify(this.metaList)
 
     for (let [key, value] of this.parameterMap) {
       if (key === VciLogRecord.TextParameterKey) {
@@ -141,107 +245,6 @@ class VciLogRecord {
     }
 
     return str
-  }
-}
-
-class VciLogRecordParser {
-  /**
-   * @param buffer {Buffer|BufferList} ログデータのバッファー。
-   */
-  constructor (buffer) {
-    this.bl = buffer instanceof BufferList ? buffer : new BufferList().append(buffer)
-  }
-
-  /**
-   * VCI のログのレコードをパースする。
-   *
-   * @param data {String|Buffer|ArrayBuffer} ws.on('message') で受信したデータを指定する。
-   *
-   * return {VciLogRecord} パース結果のレコードオブジェクトを返す。
-   */
-  static parse (data) {
-    if (data instanceof String || typeof data === 'string') {
-      let parameterMap = new Map()
-      parameterMap.set(VciLogRecord.TextParameterKey, data)
-      return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
-    } else if (data instanceof Buffer) {
-      return new VciLogRecordParser(data).exec()
-    } else if (data instanceof ArrayBuffer) {
-      return new VciLogRecordParser(Buffer.from(data)).exec()
-    } else if (Array.isArray(data)) {
-      let bl = new BufferList()
-      for (let entry of data) {
-        if (entry instanceof Buffer) {
-          bl.append(entry)
-        }
-      }
-      return new VciLogRecordParser(bl).exec()
-    } else {
-      let parameterMap = new Map()
-      parameterMap.set(VciLogRecord.TextParameterKey, `[Unsupported data type: ${typeof data}]`)
-      return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
-    }
-  }
-
-  /**
-   * ログレコードのパースを実行する。
-   *
-   * return {VciLogRecord} パース結果のレコードオブジェクトを返す。
-   */
-  exec () {
-    //
-    try {
-      let root = msgpack.decode(this.bl.duplicate())
-      if (!(root instanceof Array) || root.length < 2 || root[1] !== 'logger') {
-        // 不明なデータ形式
-        return this._unformedRecord()
-      }
-
-      if (root instanceof Array &&
-          root.length >= 3 && root[1] === 'logger' &&
-          root[2] instanceof Array) {
-        // VCI ログデータの形式として扱う
-        let parameterMap = new Map()
-        const nodeList = root[2]
-        if (nodeList.length >= 1) {
-          const parametersNode = nodeList[0]
-          if (typeof parametersNode === 'object') {
-            for (let key in parametersNode) {
-              parameterMap.set(key, parametersNode[key])
-            }
-          }
-        }
-        let metaElements = root.slice(0, 2)
-        return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaElements)
-      }
-    } catch (error) {
-      return this._unformedRecord()
-    }
-  }
-
-  _unformedRecord () {
-    let str = ''
-    let controlFlag = false
-    for (let i = 0, len = this.bl.length; i < len; ++i) {
-      const cc = this.bl.get(i)
-      if (isPrintableOrWhitespace(cc)) {
-        if (controlFlag) {
-          str += ' '
-        }
-        str += String.fromCharCode(cc)
-        controlFlag = false
-      } else {
-        if (str) {
-          str += ' '
-        }
-        str += controlCodeToString(cc)
-        controlFlag = true
-      }
-    }
-
-    let parameterMap = new Map()
-    parameterMap.set(VciLogRecord.TextParameterKey, str)
-    return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
   }
 }
 
@@ -285,7 +288,7 @@ program
   })
 
   ws.on('message', data => {
-    const record = VciLogRecordParser.parse(data)
+    const record = VciLogRecord.parse(data)
 
     // TODO フィルター処理を実装
     const outputLog = !!program.allWarnings ||
