@@ -111,7 +111,7 @@ class VciLogRecord {
    * ]
    * ```
    *
-   * @param bl {Buffer | BufferList} ログデータのバッファー。
+   * @param bl {Buffer|BufferList} ログデータのバッファー。
    *
    * return {VciLogRecord} パース結果のオブジェクトを返す。
    */
