@@ -66,25 +66,21 @@ class VciLogRecord {
    */
   static parse (data) {
     if (data instanceof String || typeof data === 'string') {
-      let parameterMap = new Map()
-      parameterMap.set(VciLogRecord.TextParameterKey, data)
-      return new this(VciLogRecordType.Unknown, parameterMap)
+      return new this(VciLogRecordType.Unknown, new Map([[VciLogRecord.TextParameterKey, data]]))
     } else if (data instanceof Buffer) {
       return this[parseVciLogRecord](data)
     } else if (data instanceof ArrayBuffer) {
       return this[parseVciLogRecord](Buffer.from(data))
     } else if (Array.isArray(data)) {
-      let bl = new BufferList()
-      for (let entry of data) {
+      const bl = new BufferList()
+      for (const entry of data) {
         if (entry instanceof Buffer) {
           bl.append(entry)
         }
       }
       return this[parseVciLogRecord](bl)
     } else {
-      let parameterMap = new Map()
-      parameterMap.set(VciLogRecord.TextParameterKey, `[Unsupported data type: ${typeof data}]`)
-      return new this(VciLogRecordType.Unknown, parameterMap)
+      return new this(VciLogRecordType.Unknown, new Map([[VciLogRecord.TextParameterKey, `[Unsupported data type: ${typeof data}]`]]))
     }
   }
 
@@ -120,23 +116,15 @@ class VciLogRecord {
 
     //
     try {
-      let root = msgpack.decode(bl.duplicate())
+      const root = msgpack.decode(bl.duplicate())
 
       if (root instanceof Array &&
           root.length >= 3 && root[1] === 'logger' &&
           root[2] instanceof Array) {
         // VCI ログデータの形式として扱う
-        let parameterMap = new Map()
         const nodeList = root[2]
-        if (nodeList.length >= 1) {
-          const parametersNode = nodeList[0]
-          if (typeof parametersNode === 'object') {
-            for (let key in parametersNode) {
-              parameterMap.set(key, parametersNode[key])
-            }
-          }
-        }
-        let metaList = root.slice(0, 2)
+        const parameterMap = (nodeList.length >= 1 && typeof nodeList[0] === 'object') ? new Map(Object.entries(nodeList[0])) : new Map()
+        const metaList = root.slice(0, 2)
         return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaList)
       }
     } catch (error) {
@@ -163,9 +151,7 @@ class VciLogRecord {
         }
       }
 
-      let parameterMap = new Map()
-      parameterMap.set(VciLogRecord.TextParameterKey, str)
-      return new VciLogRecord(VciLogRecordType.Unknown, parameterMap)
+      return new VciLogRecord(VciLogRecordType.Unknown, new Map([[VciLogRecord.TextParameterKey, str]]))
     }
   }
 
@@ -209,7 +195,7 @@ class VciLogRecord {
       }
     }
 
-    for (let key of ['Category', 'Item', 'Message']) {
+    for (const key of ['Category', 'Item', 'Message']) {
       const value = this.parameterMap.get(key)
       if (value !== undefined) {
         str += ` | ${value}`
@@ -220,23 +206,17 @@ class VciLogRecord {
   }
 
   _formatJsonRecord () {
-    let parameters = {}
-
-    for (let [key, value] of this.parameterMap) {
-      parameters[key] = value
-    }
-
     return JSON.stringify({
       type: this.type,
       meta_list: this.metaList,
-      parameters: parameters
+      parameters: [...this.parameterMap].reduce((acc, [key, value]) => Object.assign(acc, { [key]: value }), {})
     })
   }
 
   _formatFullText () {
     let str = JSON.stringify(this.metaList)
 
-    for (let [key, value] of this.parameterMap) {
+    for (const [key, value] of this.parameterMap) {
       if (key === VciLogRecord.TextParameterKey) {
         str += (str ? ' | ' : '') + value
       } else {
