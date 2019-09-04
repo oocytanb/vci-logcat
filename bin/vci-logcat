@@ -27,6 +27,7 @@ const VciLogFormatType = Object.freeze({
 })
 
 const parseVciLogRecord = Symbol('parseVciLogRecord')
+const vciLogElementsToMap = Symbol('vciLogElementsToMap')
 
 function controlCodeToString (code) {
   return '<' + (code < 16 ? '0' : '') + code.toString(16) + '>'
@@ -123,7 +124,7 @@ class VciLogRecord {
           root[2] instanceof Array) {
         // VCI ログデータの形式として扱う
         const nodeList = root[2]
-        const parameterMap = (nodeList.length >= 1 && typeof nodeList[0] === 'object') ? new Map(Object.entries(nodeList[0])) : new Map()
+        const parameterMap = (nodeList.length >= 1 && typeof nodeList[0] === 'object') ? this[vciLogElementsToMap](nodeList[0]) : new Map()
         const metaList = root.slice(0, 2)
         return new VciLogRecord(VciLogRecordType.Logger, parameterMap, metaList)
       }
@@ -153,6 +154,14 @@ class VciLogRecord {
 
       return new VciLogRecord(VciLogRecordType.Unknown, new Map([[VciLogRecord.TextParameterKey, str]]))
     }
+  }
+
+  static [vciLogElementsToMap] (elements) {
+    // VCAS 1.7.2a から'Message' 要素が、ダブルクウォートで囲まれるようになったので、取り除く処理を追加する
+    // return new Map(Object.entries(elements))
+    return Object.entries(elements).reduce((acc, [key, value]) => acc.set(key,
+      (key === 'Message' && typeof value === 'string' && value.length >= 2 && value.charAt(0) === '"' && value.charAt(value.length - 1) === '"') ? value.substring(1, value.length - 1) : value
+    ), new Map())
   }
 
   toString () {
