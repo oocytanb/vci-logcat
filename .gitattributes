@@ -1,0 +1,19 @@
+.eslintrc text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.npmignore text eol=lf
+
+DEPS text eol=lf
+LICENSE text eol=lf
+vci-logcat text eol=lf
+
+*.css text eol=lf
+*.htm text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.lua text eol=lf
+*.md text eol=lf
+*.p5js text eol=lf
+*.ts text eol=lf
+*.txt text eol=lf
