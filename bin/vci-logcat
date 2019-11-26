@@ -1,11 +1,30 @@
 #!/usr/bin/env node
 
 /*
- * Copyright (c) 2019 oO (https://github.com/oocytanb)
- * MIT Licensed
- *
- * **出力した実データをサンプルとして、仕様不明な状態で仮実装しています。仕様が判明したら適宜修正してお使いください。**
- */
+MIT License
+
+Copyright (c) 2019 oO (https://github.com/oocytanb)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+// **出力した実データをサンプルとして、仕様不明な状態で仮実装しています。仕様が判明したら適宜修正してお使いください。**
 
 'use strict'
 
@@ -244,9 +263,19 @@ program
   .option('-c, --connect <url>', 'connect to VCI WebSocket console (Default: ws://localhost:8080)')
   .option('-f, --format <format>', 'output format (default | json_record | full_text)')
   .option('-A, --all-warnings', 'output all the warnings such as "script not return"')
+  .option('-s, --suppress-state-shared-variable', 'suppress "Item_State" and "SharedVariable" categories')
   .parse(process.argv);
 
 (url => {
+  const SystemCategorySet = Object.freeze({
+    System: true
+  })
+
+  const StateSharedVariableCategorySet = Object.freeze({
+    Item_State: true,
+    SharedVariable: true
+  })
+
   let logFormat
   if (program.format) {
     const formatOption = program.format.toLowerCase()
@@ -280,8 +309,13 @@ program
     const record = VciLogRecord.parse(data)
 
     // TODO フィルター処理を実装
-    const outputLog = !!program.allWarnings ||
-                      !(record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') === 'System' && /frame:\s+script\s+not\s+return/.test(record.parameterMap.get('Message'))) // 'frame: script not return' メッセージを無視する
+    const outputLog = (
+      !!program.allWarnings ||
+      !(record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') in SystemCategorySet && /frame:\s+script\s+not\s+return/.test(record.parameterMap.get('Message'))) // 'frame: script not return' メッセージを無視する
+    ) && (
+      !program.suppressStateSharedVariable ||
+      !(record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') in StateSharedVariableCategorySet)
+    )
 
     if (outputLog) {
       console.log(record.format(logFormat))

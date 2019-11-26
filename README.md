@@ -45,9 +45,17 @@ npm install
     node ./bin/vci-logcat -c ws://localhost:8080
     ```
 
+    `vci.state` と `vci.studio.shared` のログを抑制する場合は、以下のオプションを指定して実行します。
+
+    ```
+    npm start -- -s
+    ```
+
 ## Debugging
 
-[VS Code](https://code.visualstudio.com/) でデバッグする場合、デバッグの構成を開き、`.vscode/launch.json` を以下のように編集します。
+- **このプログラムを利用するだけであれば、このセクションの設定は不要です**
+
+- [VS Code](https://code.visualstudio.com/) でこのプログラムをデバッグする場合、デバッグの構成を開き、`.vscode/launch.json` を以下のように編集します。
 
 ```
 {
