@@ -9,6 +9,8 @@
 
 ## Installation
 
+- [git](https://git-scm.com/)
+
 - [Node.js](https://nodejs.org/) >= 10
 
 ```
@@ -17,39 +19,45 @@ cd vci-logcat
 npm install
 ```
 
-## Usage
+## Settings
 
-1. `VirtualCast/config.json` に、`websocket_console_port` の指定を追加し、起動します。
+- Virtual Cast の設定から、WebSocket ロガーをホストするポートを設定します。
+
+    ![vcas-websocket-logger-config](docs/vcas-websocket-logger-config.png)
+
+- `VirtualCast/config.json` を直接編集する場合は、`websocket_console_port` の指定を追加します。
 
     ```
     {
-      "niconico":
-      {
-      },
-      "embedded_script": {
-        "websocket_console_port": 8080
-      }
+        "niconico":
+        {
+        },
+        "embedded_script": {
+            "websocket_console_port": 8080
+        }
     }
     ```
 
-2. デフォルトの、 `ws://localhost:8080` に接続し、ログを標準出力します。
+## Usage
 
-    ```
-    npm start
-    ```
+Virtual Cast スタジオに入室後、本プログラムを実行します。`ws://localhost:8080` に接続し、ログを標準出力します。
 
-    以下のコマンドと、同等です。
-    接続先を指定すれば、任意のサーバーに接続可能です。
+```
+npm start
+```
 
-    ```
-    node ./bin/vci-logcat -c ws://localhost:8080
-    ```
+以下のコマンドと同等です。
+接続先を指定すれば、任意のサーバーに接続可能です。
 
-    `vci.state` と `vci.studio.shared` のログを抑制する場合は、以下のオプションを指定して実行します。
+```
+node ./bin/vci-logcat -c ws://localhost:8080
+```
 
-    ```
-    npm start -- -s
-    ```
+`vci.state` と `vci.studio.shared` のログを抑制する場合は、以下のオプションを指定して実行します。
+
+```
+npm start -- -s
+```
 
 ## Debugging
 
