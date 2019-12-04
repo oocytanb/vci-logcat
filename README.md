@@ -40,24 +40,31 @@ npm install
 
 ## Usage
 
-Virtual Cast スタジオに入室後、本プログラムを実行します。`ws://localhost:8080` に接続し、ログを標準出力します。
+Virtual Cast スタジオに入室後、本プログラムを実行します。"ws://localhost:8080" に接続し、ログを標準出力します。
 
 ```
 npm start
 ```
 
-以下のコマンドと同等です。
-接続先を指定すれば、任意のサーバーに接続可能です。
+`vci.state` と `vci.studio.shared` のログを抑制し、かつ "foo" という名前のアイテム名が含まれるログを出力する場合は、以下のオプションを指定して実行します。
 
 ```
-node ./bin/vci-logcat -c ws://localhost:8080
+npm start -- -s -i "foo"
 ```
 
-`vci.state` と `vci.studio.shared` のログを抑制する場合は、以下のオプションを指定して実行します。
+### Options
 
-```
-npm start -- -s
-```
+#### -c \<url\>
+
+    接続先を指定します。規定値は "ws://localhost:8080" です。
+
+#### -s
+
+    `vci.state` と `vci.studio.shared` のログを抑制します。
+
+#### -i \<name\>
+
+    指定したアイテム名が含まれるログを出力します。
 
 ## Debugging
 

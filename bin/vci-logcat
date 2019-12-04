@@ -264,6 +264,7 @@ program
   .option('-f, --format <format>', 'output format (default | json_record | full_text)')
   .option('-A, --all-warnings', 'output all the warnings such as "script not return"')
   .option('-s, --suppress-state-shared-variable', 'suppress "Item_State" and "SharedVariable" categories')
+  .option('-i, --include-item <name>', 'specify the item name to include')
   .parse(process.argv);
 
 (url => {
@@ -275,6 +276,24 @@ program
     Item_State: true,
     SharedVariable: true
   })
+
+  function recordCategoryIn (record, categorySet) {
+    return record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') in categorySet
+  }
+
+  function recordMessageContainsScriptNotReturn (record) {
+    // 'frame: script not return' メッセージが含まれているかを調べる
+    return recordCategoryIn(record, SystemCategorySet) && /frame:\s+script\s+not\s+return/.test(record.parameterMap.get('Message'))
+  }
+
+  function recordParameterIncludes (record, key, str) {
+    if (record.type !== VciLogRecord.RecordType.Logger) {
+      return false
+    }
+
+    const val = record.parameterMap.get(key)
+    return typeof val === 'string' && val.indexOf(str) >= 0
+  }
 
   let logFormat
   if (program.format) {
@@ -311,10 +330,13 @@ program
     // TODO フィルター処理を実装
     const outputLog = (
       !!program.allWarnings ||
-      !(record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') in SystemCategorySet && /frame:\s+script\s+not\s+return/.test(record.parameterMap.get('Message'))) // 'frame: script not return' メッセージを無視する
+      !recordMessageContainsScriptNotReturn(record)
     ) && (
       !program.suppressStateSharedVariable ||
-      !(record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') in StateSharedVariableCategorySet)
+      !recordCategoryIn(record, StateSharedVariableCategorySet)
+    ) && (
+      !program.includeItem ||
+      recordParameterIncludes(record, 'Item', program.includeItem)
     )
 
     if (outputLog) {
