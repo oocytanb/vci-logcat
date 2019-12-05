@@ -45,6 +45,12 @@ const VciLogFormatType = Object.freeze({
   FullText: 'full_text'
 })
 
+const VciLogRecordSystemCategorySet = new Set(['System'])
+
+const VciLogRecordStateSharedVariableCategorySet = new Set(['Item_State', 'SharedVariable'])
+
+const VciLogRecordItemParameterKeySet = new Set(['Item'])
+
 const parseVciLogRecord = Symbol('parseVciLogRecord')
 const vciLogElementsToMap = Symbol('vciLogElementsToMap')
 
@@ -61,9 +67,9 @@ function isPrintableOrWhitespace (code) {
  */
 class VciLogRecord {
   /**
-   * @param type {VciLogRecord.RecordType} レコードのタイプ。
-   * @param parameterMap {Map} キーペア形式のパラメーターオブジェクト。
-   * @param metaList {Array} メタ要素の配列。
+   * @param {VciLogRecord.RecordType} type レコードのタイプ。
+   * @param {Map} parameterMap キーペア形式のパラメーターオブジェクト。
+   * @param {Array} metaList メタ要素の配列。
    */
   constructor (type, parameterMap, metaList = undefined) {
     this.type = type
@@ -80,9 +86,9 @@ class VciLogRecord {
   /**
    * VCI のログのレコードをパースする。
    *
-   * @param data {String|Buffer|ArrayBuffer} ws.on('message') で受信したデータを指定する。
+   * @param {(string|Buffer|ArrayBuffer)} data ws.on('message') で受信したデータを指定する。
    *
-   * return {VciLogRecord} パース結果のオブジェクトを返す。
+   * @return {VciLogRecord} パース結果のオブジェクトを返す。
    */
   static parse (data) {
     if (data instanceof String || typeof data === 'string') {
@@ -127,9 +133,9 @@ class VciLogRecord {
    * ]
    * ```
    *
-   * @param bl {Buffer|BufferList} ログデータのバッファー。
+   * @param {(Buffer|BufferList)} bl ログデータのバッファー。
    *
-   * return {VciLogRecord} パース結果のオブジェクトを返す。
+   * @return {VciLogRecord} パース結果のオブジェクトを返す。
    */
   static [parseVciLogRecord] (buffer) {
     const bl = (buffer instanceof BufferList) ? buffer : new BufferList().append(buffer)
@@ -190,9 +196,9 @@ class VciLogRecord {
   /**
    * 指定したフォーマットに整形する。
    *
-   * @param formatType {VciLogRecord.FormatType} フォーマットを指定する。
+   * @param {VciLogRecord.FormatType} formatType フォーマットを指定する。
    *
-   * @return フォーマットした文字列。
+   * @return {string} フォーマットした文字列。
    */
   format (formatType) {
     switch (formatType) {
@@ -254,6 +260,89 @@ class VciLogRecord {
 
     return str
   }
+
+  /**
+   * レコードのテスト条件。
+   * @typedef {Object} TestConditions
+   * @property {boolean} [allWarnings] すべての警告を含めるか。(例: "frame: script not return")
+   * @property {boolean} [suppressStateSharedVariable] `vci.state` と `vci.studio.shared` のログを抑制するか。
+   * @property {(RegExp|string)} [includeItem] アイテム名の検索パターン。
+   *    - `RegExp` 型を指定した場合は、`regexSearch` と `caseSensitive` は無視され、正規表現検索が行われる。
+   *    - `string` 型を指定した場合は、`regexSearch` に `true` を指定した場合は、正規表現検索を試みる。`regexSearch` に `true` を指定しなかったか、正規表現のコンパイルに失敗した場合は、プレーンテキスト検索を行う。
+   * @property {boolean} [regexSearch] 正規表現検索を有効にするか。
+   * @property {boolean} [caseSensitive] 大文字と小文字を区別するか。
+   */
+
+  /**
+   * 指定した条件を満たすかをテストする。
+   *
+   * @param {TestConditions} conditions テスト条件を指定する。
+   *
+   * @return {boolean} テスト結果を真偽値で返す。
+   */
+  test (conditions) {
+    if (!conditions.allWarnings && this._messageContainsScriptNotReturn()) {
+      return false
+    }
+
+    if (conditions.suppressStateSharedVariable && this._categoryIn(VciLogRecordStateSharedVariableCategorySet)) {
+      return false
+    }
+
+    if (conditions.includeItem && !this._parameterIncludes(VciLogRecordItemParameterKeySet, conditions.includeItem, !!conditions.regexSearch)) {
+      return false
+    }
+
+    return true
+  }
+
+  _categoryIn (categorySet) {
+    return this.type === VciLogRecord.RecordType.Logger && categorySet.has(this.parameterMap.get('Category'))
+  }
+
+  _messageContainsScriptNotReturn () {
+    // 'frame: script not return' メッセージが含まれているかを調べる
+    return this._categoryIn(VciLogRecordSystemCategorySet) && /frame:\s+script\s+not\s+return/.test(this.parameterMap.get('Message'))
+  }
+
+  _someParameter (keySet, pred) {
+    for (const key of keySet) {
+      const val = this.parameterMap.get(key)
+      if (typeof val === 'string' && pred(val)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  _parameterIncludes (keySet, pattern, regexSearch = false, caseSensitive = false) {
+    if (this.type !== VciLogRecord.RecordType.Logger) {
+      return false
+    }
+
+    if (pattern instanceof RegExp) {
+      return this._someParameter(keySet, val => pattern.test(val))
+    } else if (typeof pattern === 'string') {
+      if (regexSearch) {
+        try {
+          const re = new RegExp(pattern, caseSensitive ? '' : 'i')
+          return this._someParameter(keySet, val => re.test(val))
+        } catch (e) {
+          // 正規表現パターンに誤りがある場合は、正規表現を使用しない
+        }
+      }
+    } else {
+      return false
+    }
+
+    // プレーンテキストとして検索する
+    if (caseSensitive) {
+      return this._someParameter(keySet, val => val.includes(pattern))
+    } else {
+      const lcp = pattern.toLowerCase()
+      return this._someParameter(keySet, val => val.toLowerCase().includes(lcp))
+    }
+  }
 }
 
 //
@@ -265,36 +354,10 @@ program
   .option('-A, --all-warnings', 'output all the warnings such as "script not return"')
   .option('-s, --suppress-state-shared-variable', 'suppress "Item_State" and "SharedVariable" categories')
   .option('-i, --include-item <name>', 'specify the item name to include')
+  .option('-r, --regex-search', 'enable regular expression search')
   .parse(process.argv);
 
 (url => {
-  const SystemCategorySet = Object.freeze({
-    System: true
-  })
-
-  const StateSharedVariableCategorySet = Object.freeze({
-    Item_State: true,
-    SharedVariable: true
-  })
-
-  function recordCategoryIn (record, categorySet) {
-    return record.type === VciLogRecord.RecordType.Logger && record.parameterMap.get('Category') in categorySet
-  }
-
-  function recordMessageContainsScriptNotReturn (record) {
-    // 'frame: script not return' メッセージが含まれているかを調べる
-    return recordCategoryIn(record, SystemCategorySet) && /frame:\s+script\s+not\s+return/.test(record.parameterMap.get('Message'))
-  }
-
-  function recordParameterIncludes (record, key, str) {
-    if (record.type !== VciLogRecord.RecordType.Logger) {
-      return false
-    }
-
-    const val = record.parameterMap.get(key)
-    return typeof val === 'string' && val.indexOf(str) >= 0
-  }
-
   let logFormat
   if (program.format) {
     const formatOption = program.format.toLowerCase()
@@ -326,20 +389,7 @@ program
 
   ws.on('message', data => {
     const record = VciLogRecord.parse(data)
-
-    // TODO フィルター処理を実装
-    const outputLog = (
-      !!program.allWarnings ||
-      !recordMessageContainsScriptNotReturn(record)
-    ) && (
-      !program.suppressStateSharedVariable ||
-      !recordCategoryIn(record, StateSharedVariableCategorySet)
-    ) && (
-      !program.includeItem ||
-      recordParameterIncludes(record, 'Item', program.includeItem)
-    )
-
-    if (outputLog) {
+    if (record.test(program)) {
       console.log(record.format(logFormat))
     }
   })

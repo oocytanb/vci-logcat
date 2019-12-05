@@ -54,17 +54,21 @@ npm start -- -s -i "foo"
 
 ### Options
 
-#### -c \<url\>
+- **-c \<url\>**
 
     接続先を指定します。規定値は "ws://localhost:8080" です。
 
-#### -s
+- **-s**
 
     `vci.state` と `vci.studio.shared` のログを抑制します。
 
-#### -i \<name\>
+- **-i \<name\>**
 
     指定したアイテム名が含まれるログを出力します。
+
+- **-r**
+
+    正規表現検索を有効にします。
 
 ## Debugging
 

@@ -1,6 +1,6 @@
 {
   "name": "vci-logcat",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "VCI logcat",
   "main": "index.js",
   "scripts": {
@@ -27,10 +27,10 @@
     "vci-logcat": "./bin/vci-logcat"
   },
   "devDependencies": {
-    "eslint": "^6.2.2",
+    "eslint": "^6.7.2",
     "eslint-config-standard": "^14.1.0",
     "eslint-plugin-import": "^2.18.2",
-    "eslint-plugin-node": "^9.1.0",
+    "eslint-plugin-node": "^9.2.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1"
   }
