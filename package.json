@@ -19,18 +19,18 @@
   "license": "MIT",
   "dependencies": {
     "bl": "~2.2.0",
-    "commander": "~2.19.0",
+    "commander": "~5.1.0",
     "msgpack5": "~4.2.1",
-    "ws": "~6.1.4"
+    "ws": "~7.3.0"
   },
   "bin": {
     "vci-logcat": "./bin/vci-logcat"
   },
   "devDependencies": {
-    "eslint": "^6.8.0",
-    "eslint-config-standard": "^14.1.0",
-    "eslint-plugin-import": "^2.20.1",
-    "eslint-plugin-node": "^9.2.0",
+    "eslint": "^7.3.1",
+    "eslint-config-standard": "^14.1.1",
+    "eslint-plugin-import": "^2.21.2",
+    "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1"
   }
