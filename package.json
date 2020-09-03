@@ -18,7 +18,7 @@
   "author": "oO",
   "license": "MIT",
   "dependencies": {
-    "bl": "~2.2.0",
+    "bl": "~2.2.1",
     "commander": "~5.1.0",
     "msgpack5": "~4.2.1",
     "ws": "~7.3.0"
