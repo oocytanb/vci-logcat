@@ -22,7 +22,7 @@
     "bl": "~2.2.1",
     "commander": "~5.1.0",
     "msgpack5": "~4.5.1",
-    "ws": "~7.3.1"
+    "ws": "~7.4.6"
   },
   "bin": {
     "vci-logcat": "./bin/vci-logcat"
