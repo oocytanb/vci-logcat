@@ -1,0 +1,10 @@
+{
+  "diff": true,
+  "extension": ["ts", "tsx"],
+  "package": "./package.json",
+  "recursive": true,
+  "require": [
+    "ts-node/register"
+  ],
+  "spec": "./spec/**/*.spec.*"
+}

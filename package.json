@@ -1,37 +1,64 @@
 {
   "private": true,
   "name": "vci-logcat",
-  "version": "0.6.1",
   "description": "VCI logcat",
-  "main": "index.js",
-  "scripts": {
-    "start": "node ./bin/vci-logcat -c ws://localhost:8080",
-    "test": "eslint ./bin/*",
-    "lint": "eslint ./bin/*"
-  },
+  "version": "0.7.0",
+  "author": "oO",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oocytanb/vci-logcat"
+    "url": "https://github.com/oocytanb/vci-logcat.git"
   },
+  "main": "bin/index.js",
+  "types": "bin/index.d.ts",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
   "keywords": [
     "vci"
   ],
-  "author": "oO",
-  "license": "MIT",
-  "dependencies": {
-    "bl": "~2.2.1",
-    "commander": "~5.1.0",
-    "msgpack5": "~4.5.1",
-    "ws": "~7.3.1"
-  },
-  "bin": {
-    "vci-logcat": "./bin/vci-logcat"
+  "scripts": {
+    "lint": "eslint . && prettier -c src spec",
+    "lint:fix": "prettier --write src spec && eslint . --fix",
+    "test": "mocha",
+    "start": "ts-node ./src/node_cli/cli_main.ts",
+    "retail": "node ./bin/vci-logcat",
+    "clean": "rimraf ./bin/*/",
+    "build:package_info": "ts-node ./build_scripts/generate_package_info.ts",
+    "build": "npm run build:package_info && npm run lint:fix && npm run clean && tsc",
+    "pack:d": "npm pack --dry-run"
   },
   "devDependencies": {
-    "eslint": "^7.26.0",
-    "eslint-config-standard": "^16.0.2",
-    "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^5.1.0"
+    "@types/chai": "^4.2.21",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^16.4.8",
+    "@typescript-eslint/eslint-plugin": "^4.28.5",
+    "@typescript-eslint/parser": "^4.28.5",
+    "chai": "^4.3.4",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "prettier": "^2.3.2",
+    "rimraf": "^3.0.2",
+    "ts-node": "^10.1.0",
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "@cycle/run": "^5.5.0",
+    "@types/msgpack-lite": "^0.1.8",
+    "@types/ramda": "^0.27.44",
+    "@types/ws": "^7.4.7",
+    "chalk": "^4.1.2",
+    "commander": "^8.1.0",
+    "isomorphic-ws": "^4.0.1",
+    "mocha": "^9.0.3",
+    "moment": "^2.29.1",
+    "msgpack-lite": "^0.1.26",
+    "ramda": "^0.27.1",
+    "ws": "^8.0.0",
+    "xstream": "^11.14.0"
   }
 }
