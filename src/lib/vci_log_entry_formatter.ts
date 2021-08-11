@@ -1,62 +1,17 @@
 import * as R from 'ramda';
-import moment from 'moment';
 import chalk from 'chalk';
 
 import {
   Entry,
   FieldKey,
   LogLevel,
-  logLevelToLabel,
   roundLogLevel,
+  fieldText,
 } from './vci_log_entry';
 
 export * from './vci_log_entry';
 
-const formatTimestamp = (timestamp: Date): string => {
-  return Number.isFinite(timestamp.getTime())
-    ? moment(timestamp).format('HH:mm:ss')
-    : '--:--:--';
-};
-
-const immediateFieldMap: Readonly<
-  Partial<Record<FieldKey, (entry: Entry) => string>>
-> = {
-  LogLevel: (entry) => logLevelToLabel(entry.logLevel),
-  Message: (entry) => entry.message,
-  Category: (entry) => entry.category,
-  UnixTime: (entry) => formatTimestamp(entry.timestamp),
-};
-
-export function fieldText(
-  entry: Entry,
-  fieldKey: FieldKey | string
-): string | undefined;
-
-export function fieldText(
-  entry: Entry,
-  fieldKey: FieldKey | string,
-  defaultValue: string
-): string;
-
-export function fieldText(
-  entry: Entry,
-  fieldKey: FieldKey | string,
-  defaultValue?: string
-): string | undefined {
-  if (fieldKey == FieldKey.LogLevel) {
-    // ログレベルの場合は、ラベルを返す。
-    return logLevelToLabel(entry.logLevel);
-  } else {
-    // フィールドが値を持っていれば、immediateFieldMap を優先して値を返す。
-    // そうでなければ、defaultValue を返す。
-    const val = entry.fields[fieldKey];
-    return val === undefined
-      ? defaultValue
-      : immediateFieldMap[fieldKey as FieldKey]?.(entry) ?? val;
-  }
-}
-
-export const defaultFieldList: Array<FieldKey> = [
+export const defaultFieldList: ReadonlyArray<FieldKey> = [
   FieldKey.UnixTime,
   FieldKey.LogLevel,
   FieldKey.Category,
@@ -64,48 +19,21 @@ export const defaultFieldList: Array<FieldKey> = [
   FieldKey.Message,
 ];
 
-export type FieldCallback<TResult> = (
+export type EntryTextFormatter = (entry: Entry) => string;
+
+export type FieldCollector<TResult> = (
   prev: TResult,
   curr: string | undefined,
   key: string,
   entry: Entry
 ) => TResult;
 
-export const reduceFields = <TResult>(
-  entry: Entry,
-  callback: FieldCallback<TResult>,
-  accumulator: TResult
-): TResult => {
-  return R.reduce(
-    (prev, key) => {
-      if (typeof key === 'string') {
-        return callback(prev, fieldText(entry, key), key, entry);
-      } else {
-        throw new TypeError(`Invalid key: ${key}`);
-      }
-    },
-    accumulator,
-    R.keys(entry.fields)
-  );
-};
-
-export const reduceSpecifiedFields = <TResult>(
-  entry: Entry,
-  keys: FieldKey[],
-  callback: FieldCallback<TResult>,
-  accumulator: TResult
-): TResult => {
-  return R.reduce(
-    (prev, fieldKey) => {
-      const text = fieldText(entry, fieldKey);
-      return text === undefined ? prev : callback(prev, text, fieldKey, entry);
-    },
-    accumulator,
-    keys
-  );
-};
-
-export type EntryTextFormatter = (entry: Entry) => string;
+export const fieldReducer =
+  <TResult>(collector: FieldCollector<TResult>, entry: Entry) =>
+  (prev: TResult, key: string): TResult => {
+    const text = fieldText(key, entry);
+    return text === undefined ? prev : collector(prev, text, key, entry);
+  };
 
 type FieldTextFormatter = (
   value: string | undefined,
@@ -133,7 +61,7 @@ const consoleStyledFieldTextFormatter = (
   key: string,
   entry: Entry
 ): string | undefined => {
-  if (value !== undefined && key == FieldKey.LogLevel) {
+  if (value !== undefined && key === FieldKey.LogLevel) {
     const styler = consoleStylerMap[roundLogLevel(entry.logLevel)];
     return styler ? styler(value) : value;
   } else {
@@ -144,42 +72,48 @@ const consoleStyledFieldTextFormatter = (
 const accumulateFieldText = (prev: string, text: string | undefined) =>
   text === undefined ? prev : prev ? prev + ' | ' + text : text;
 
-const makeFullTextFormatter =
-  (fieldFormatter: FieldTextFormatter) => (entry: Entry) =>
-    reduceFields(
-      entry,
-      (prev, curr, key, entry) => {
-        const s = key + ' = ' + (fieldFormatter(curr, key, entry) ?? '');
-        return accumulateFieldText(prev, s);
-      },
-      ''
+const makeTextFormatter =
+  (fieldFormatter: FieldTextFormatter, keys: ReadonlyArray<FieldKey>) =>
+  (entry: Entry) =>
+    R.reduce(
+      fieldReducer(
+        (prev, curr, key, entry) =>
+          accumulateFieldText(prev, fieldFormatter(curr, key, entry)),
+        entry
+      ),
+      '',
+      keys
     );
 
-const makeSpecifiedTextFormatter =
-  (fieldFormatter: FieldTextFormatter, keys: FieldKey[]) => (entry: Entry) =>
-    reduceSpecifiedFields(
-      entry,
-      keys,
-      (prev, curr, key, entry) => {
-        return accumulateFieldText(prev, fieldFormatter(curr, key, entry));
-      },
-      ''
+const makeFullTextFormatter =
+  (fieldFormatter: FieldTextFormatter) => (entry: Entry) =>
+    R.reduce(
+      fieldReducer(
+        (prev, curr, key, entry) =>
+          accumulateFieldText(
+            prev,
+            key + ' = ' + (fieldFormatter(curr, key, entry) ?? '')
+          ),
+        entry
+      ),
+      '',
+      R.keys<Record<string, string>>(entry.fields)
     );
+
+export const defaultTextFormatter = makeTextFormatter(
+  plainFieldTextFormatter,
+  defaultFieldList
+);
+
+export const consoleStyledDefaultTextFormatter = makeTextFormatter(
+  consoleStyledFieldTextFormatter,
+  defaultFieldList
+);
 
 export const fullTextFormatter = makeFullTextFormatter(plainFieldTextFormatter);
 
 export const consoleStyledFullTextFormatter = makeFullTextFormatter(
   consoleStyledFieldTextFormatter
-);
-
-export const defaultTextFormatter = makeSpecifiedTextFormatter(
-  plainFieldTextFormatter,
-  defaultFieldList
-);
-
-export const consoleStyledDefaultTextFormatter = makeSpecifiedTextFormatter(
-  consoleStyledFieldTextFormatter,
-  defaultFieldList
 );
 
 export const jsonRecordFormatter = (entry: Entry): string =>

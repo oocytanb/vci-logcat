@@ -2,7 +2,7 @@
   "private": true,
   "name": "vci-logcat",
   "description": "VCI logcat",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "author": "oO",
   "license": "MIT",
   "repository": {
@@ -24,15 +24,19 @@
   "scripts": {
     "lint": "eslint . && prettier -c src spec",
     "lint:fix": "prettier --write src spec && eslint . --fix",
+    "test:package_info": "mocha --exclude './**' --file ./spec/package_info.spec.ts",
     "test": "mocha",
     "start": "ts-node ./src/node_cli/cli_main.ts",
     "retail": "node ./bin/vci-logcat",
-    "clean": "rimraf ./bin/*/",
+    "coverage": "nyc npm run test",
+    "coverage:clean": "rimraf .nyc_output coverage",
+    "clean": "rimraf ./bin/*/ && npm run coverage:clean",
     "build:package_info": "ts-node ./build_scripts/generate_package_info.ts",
     "build": "npm run build:package_info && npm run lint:fix && npm run clean && tsc",
     "pack:d": "npm pack --dry-run"
   },
   "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/chai": "^4.2.21",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.4.8",
@@ -41,6 +45,7 @@
     "chai": "^4.3.4",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
+    "nyc": "^15.1.0",
     "prettier": "^2.3.2",
     "rimraf": "^3.0.2",
     "ts-node": "^10.1.0",

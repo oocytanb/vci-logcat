@@ -30,16 +30,15 @@ const main = ({ props, vciLog }: Sources): Sinks => {
     (props): SocketRequest => makeConnectRequest(props.url)
   );
 
+  const outputDataMapper =
+    (formatter: vle.EntryTextFormatter) =>
+    (entry: vle.Entry): VciLogOutputData => ({ entry, formatter });
+
   const output$ = props
-    .map((props) =>
+    .map((po) =>
       vciLog
-        .filter((entry) => props.condition.evaluate(entry))
-        .map(
-          (entry): VciLogOutputData => ({
-            entry,
-            formatter: props.logFormatter,
-          })
-        )
+        .filter((entry) => po.condition.evaluate(entry))
+        .map(outputDataMapper(po.logFormatter))
     )
     .flatten()
     .remember();
@@ -50,12 +49,8 @@ const main = ({ props, vciLog }: Sources): Sinks => {
   };
 };
 
-(() => {
-  const drivers = {
-    props: () => xs.of(makeProgramOptions(process.argv)),
-    vciLog: makeVciLogSocketInputDriver(),
-    output: makeVciLogConsoleOututDriver(console),
-  };
-
-  run(main, drivers);
-})();
+run(main, {
+  props: () => xs.of(makeProgramOptions(process.argv)),
+  vciLog: makeVciLogSocketInputDriver(),
+  output: makeVciLogConsoleOututDriver(console),
+});

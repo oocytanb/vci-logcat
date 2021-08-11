@@ -7,23 +7,19 @@ export type VciLogOutputData = {
   formatter?: vle.EntryTextFormatter;
 };
 
-export const makeVciLogConsoleOututDriver = (
-  console: Console
-): typeof consoleDriver => {
-  const consoleDriver = (outputData$: xs<VciLogOutputData>) => {
+export const makeVciLogConsoleOututDriver =
+  (console: Console): ((outputData$: xs<VciLogOutputData>) => void) =>
+  (outputData$: xs<VciLogOutputData>) =>
     outputData$.addListener({
       next: (outputData) => {
         const entry = outputData.entry;
         const formatter =
           outputData.formatter ?? vle.consoleStyledDefaultTextFormatter;
         const msg = formatter(entry);
-        if (entry.kind == vle.EntryKind.Notification) {
+        if (entry.kind === vle.EntryKind.Notification) {
           console.warn(msg);
         } else {
           console.log(msg);
         }
       },
     });
-  };
-  return consoleDriver;
-};

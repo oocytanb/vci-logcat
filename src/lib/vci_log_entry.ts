@@ -1,4 +1,5 @@
 import * as R from 'ramda';
+import moment from 'moment';
 
 export const EntryKind = {
   Unknown: 'unknown',
@@ -79,15 +80,6 @@ export const roundLogLevel = (level: number): LogLevel =>
 
 export type Fields = { [key in FieldKey]?: string } & { [key: string]: string };
 
-type EntryProps = Readonly<{
-  kind: EntryKind;
-  timestamp: Date;
-  logLevel: number;
-  category: Category;
-  message: string;
-  fields: Fields;
-}>;
-
 export const EntryMessage = {
   UnsupportedDataFormat: '[Unsupported data format]',
 } as const;
@@ -99,8 +91,8 @@ const parseUnixTime = (str: string): Date => {
 };
 
 const parseMessageLogLevel = (
-  str: string,
-  defaultLogLevel = Number.NaN
+  defaultLogLevel: number,
+  str: string
 ): [number, string] => {
   const rePiped = /^([a-zA-Z]+)\s?\|\s?/;
   const reBracketed = /^\[([a-zA-Z]+)\]/;
@@ -122,106 +114,113 @@ const parseMessageField = (str: string): string => {
     : str;
 };
 
-export class Entry {
-  get kind(): EntryKind {
-    return this.props.kind;
-  }
+const formatTimestamp = (timestamp: Date): string => {
+  return Number.isFinite(timestamp.getTime())
+    ? moment(timestamp).format('HH:mm:ss')
+    : '--:--:--';
+};
 
-  get timestamp(): Date {
-    return this.props.timestamp;
-  }
+export interface Entry {
+  readonly kind: EntryKind;
+  readonly timestamp: Date;
+  readonly logLevel: number;
+  readonly category: Category;
+  readonly message: string;
+  readonly fields: Fields;
+}
 
-  get logLevel(): number {
-    return this.props.logLevel;
-  }
+export const make = (kind: EntryKind, fields?: Readonly<Fields>): Entry => {
+  const mFields = Object.assign({}, fields);
 
-  get category(): Category {
-    return this.props.category;
-  }
+  const mUnixTime = mFields.UnixTime;
+  const timestamp = mUnixTime ? parseUnixTime(mUnixTime) : new Date(Number.NaN);
 
-  get message(): string {
-    return this.props.message;
-  }
+  const category = (mFields.Category as Category) ?? Category.Unknown;
 
-  get fields(): Fields {
-    return this.props.fields;
-  }
+  const mLevelStr = mFields.LogLevel;
+  const mLevelNumber = mLevelStr ? logLevelFromLabel(mLevelStr) : Number.NaN;
+  const mLogLevel = Number.isFinite(mLevelNumber)
+    ? mLevelNumber
+    : LogLevel.Debug;
 
-  private constructor(props: EntryProps) {
-    this.props = props;
-  }
+  // ロガータイプで、ログレベルが Debug のときは、メッセージに含まれる
+  // ログレベルを優先する
+  const mMessage = mFields.Message;
+  const [logLevel, message] =
+    kind === EntryKind.Logger && mLogLevel === LogLevel.Debug && mMessage
+      ? parseMessageLogLevel(mLogLevel, mMessage)
+      : [mLogLevel, mMessage ?? ''];
 
-  static make(kind: EntryKind, fields?: Readonly<Fields>): Entry {
-    const mFields = Object.assign({}, fields);
+  return {
+    kind,
+    timestamp,
+    category,
+    logLevel,
+    message,
+    fields: mFields,
+  };
+};
 
-    const mUnixTime = mFields.UnixTime;
-    const timestamp = mUnixTime
-      ? parseUnixTime(mUnixTime)
-      : new Date(Number.NaN);
+export const fromText = (
+  kind: EntryKind,
+  logLevel: number,
+  text: string
+): Entry =>
+  make(kind, {
+    LogLevel: logLevelToLabel(logLevel),
+    Message: text,
+  });
 
-    const category = (mFields.Category as Category) ?? Category.Unknown;
-
-    const mLevelStr = mFields.LogLevel;
-    const mLevelNumber = mLevelStr ? logLevelFromLabel(mLevelStr) : Number.NaN;
-    const mLogLevel = Number.isFinite(mLevelNumber)
-      ? mLevelNumber
-      : LogLevel.Debug;
-
-    // ロガータイプで、ログレベルが Debug のときは、メッセージに含まれるログレベルを優先する.
-    const mMessage = mFields.Message;
-    const [logLevel, message] =
-      kind === EntryKind.Logger && mLogLevel === LogLevel.Debug && mMessage
-        ? parseMessageLogLevel(mMessage, mLogLevel)
-        : [mLogLevel, mMessage ?? ''];
-    return new Entry({
-      kind: kind,
-      timestamp,
-      category,
-      logLevel,
-      message,
-      fields: mFields,
-    });
-  }
-
-  static fromText(kind: EntryKind, logLevel: number, text: string): Entry {
-    return Entry.make(kind, {
-      LogLevel: logLevelToLabel(logLevel),
-      Message: text,
-    });
-  }
-
-  private static parseFields(fieldsNode: unknown): Entry {
-    if (R.is(Object, fieldsNode)) {
-      const fields = R.mapObjIndexed(
-        (v, k) =>
-          k === FieldKey.Message && typeof v === 'string'
-            ? parseMessageField(v)
-            : String(v),
-        fieldsNode as Record<string, unknown>
-      );
-      return Entry.make(EntryKind.Logger, fields);
-    } else {
-      return Entry.fromText(
+const parseFields = (fieldsNode: unknown): Entry =>
+  R.is(Object, fieldsNode)
+    ? make(
+        EntryKind.Logger,
+        R.mapObjIndexed(
+          (v, k) =>
+            k === FieldKey.Message && typeof v === 'string'
+              ? parseMessageField(v)
+              : String(v),
+          fieldsNode as Record<string, unknown>
+        )
+      )
+    : fromText(
         EntryKind.Notification,
         LogLevel.Error,
         EntryMessage.UnsupportedDataFormat
       );
-    }
-  }
 
-  static fromStructure(data: unknown): Entry {
-    if (Array.isArray(data) && data.length >= 3 && data[1] === 'logger') {
-      const nodeList = data[2];
-      if (Array.isArray(nodeList) && nodeList.length >= 1) {
-        return Entry.parseFields(nodeList[0]);
-      }
-    }
-    return Entry.fromText(
-      EntryKind.Notification,
-      LogLevel.Error,
-      EntryMessage.UnsupportedDataFormat
-    );
-  }
+export const fromStructure = (data: unknown): Entry =>
+  Array.isArray(data) &&
+  data.length >= 3 &&
+  data[1] === 'logger' &&
+  Array.isArray(data[2]) &&
+  !R.isEmpty(data[2])
+    ? parseFields(data[2][0])
+    : fromText(
+        EntryKind.Notification,
+        LogLevel.Error,
+        EntryMessage.UnsupportedDataFormat
+      );
 
-  private props: EntryProps;
-}
+const immediateFieldMap: Readonly<
+  Partial<Record<FieldKey, (entry: Entry) => string>>
+> = {
+  LogLevel: (entry) => logLevelToLabel(entry.logLevel),
+  Message: (entry) => entry.message,
+  Category: (entry) => entry.category,
+  UnixTime: (entry) => formatTimestamp(entry.timestamp),
+};
+
+export const fieldText = (
+  fieldKey: FieldKey | string,
+  entry: Entry
+): string | undefined =>
+  fieldKey === FieldKey.LogLevel || fieldKey in entry.fields
+    ? immediateFieldMap[fieldKey as FieldKey]?.(entry) ?? entry.fields[fieldKey]
+    : undefined;
+
+export const fieldTextOr = (
+  defaultValue: string,
+  fieldKey: FieldKey | string,
+  entry: Entry
+): string => fieldText(fieldKey, entry) ?? defaultValue;

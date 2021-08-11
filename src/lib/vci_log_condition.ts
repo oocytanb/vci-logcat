@@ -4,6 +4,7 @@ import * as vle from './vci_log_entry';
 
 export const ConditionKind = {
   Any: 'ANY',
+  Never: 'NEVER',
   NotOperator: 'NOT',
   AndOperator: 'AND',
   OrOperator: 'OR',
@@ -23,7 +24,7 @@ export interface Condition {
   readonly evaluate: (entry: vle.Entry) => boolean;
 }
 
-export type TextMapper = (str: string) => string;
+type TextMapper = (str: string) => string;
 
 type TextTester = (str: string) => boolean;
 
@@ -33,7 +34,7 @@ const fieldTextEvaluator = (
 ) => {
   return (entry: vle.Entry) =>
     R.any((key) => {
-      const fieldVal = entry.fields[key];
+      const fieldVal = vle.fieldText(key, entry);
       return R.isNil(fieldVal) ? false : fieldTester(fieldVal);
     }, fieldKeys);
 };
@@ -49,6 +50,20 @@ class AnyCondition implements Condition {
 
   evaluate(_entry: vle.Entry) {
     return true;
+  }
+}
+
+class NeverCondition implements Condition {
+  kind: ConditionKind;
+  children: ReadonlyArray<Condition>;
+
+  constructor() {
+    this.kind = ConditionKind.Never;
+    this.children = [];
+  }
+
+  evaluate(_entry: vle.Entry) {
+    return false;
   }
 }
 
@@ -184,17 +199,36 @@ const conditionKindIsAny = R.compose(
 
 const conditionKindIsNotAny = R.compose(R.not, conditionKindIsAny);
 
-export const anyCondition: Condition = new AnyCondition();
+const conditionKindIsNever = R.compose(
+  R.equals<ConditionKind>(ConditionKind.Never),
+  R.view(R.lensProp<Condition, 'kind'>('kind'))
+);
 
-export const overFrameTimeWarningCondition: Condition =
-  new OverFrameTimeWarningCondition();
+const conditionKindIsNotNever = R.compose(R.not, conditionKindIsNever);
 
-export const makeNotCondition = (operand: Condition): Condition =>
-  operand instanceof NotCondition
+const staticAnyCondition = new AnyCondition();
+
+export const anyCondition = (): Condition => staticAnyCondition;
+
+const staticNeverCondition = new NeverCondition();
+
+export const neverCondition = (): Condition => staticNeverCondition;
+
+const staticOverFrameTimeWarningCondition = new OverFrameTimeWarningCondition();
+
+export const overFrameTimeWarningCondition = (): Condition =>
+  staticOverFrameTimeWarningCondition;
+
+export const notCondition = (operand: Condition): Condition =>
+  operand instanceof NotCondition && operand.children.length == 1
     ? operand.children[0]
+    : operand instanceof AnyCondition
+    ? neverCondition()
+    : operand instanceof NeverCondition
+    ? anyCondition()
     : new NotCondition(operand);
 
-export const makeAndCondition = (
+export const andCondition = (
   first: Condition,
   ...rest: Condition[]
 ): Condition => {
@@ -203,31 +237,48 @@ export const makeAndCondition = (
     [first, ...rest]
   ).filter(conditionKindIsNotAny);
 
-  const hd = R.head(ls);
-  return hd === undefined ? anyCondition : new AndCondition(hd, ...R.tail(ls));
+  if (R.any(conditionKindIsNever, ls)) {
+    return neverCondition();
+  } else {
+    const hd = R.head(ls);
+    if (hd === undefined) {
+      return anyCondition();
+    } else {
+      const tl = R.tail(ls);
+      return R.isEmpty(tl) ? hd : new AndCondition(hd, ...tl);
+    }
+  }
 };
 
-export const makeOrCondition = (
+export const orCondition = (
   first: Condition,
   ...rest: Condition[]
 ): Condition => {
   const ls = R.chain(
     (elem) => (elem instanceof OrCondition ? elem.children : [elem]),
     [first, ...rest]
-  );
+  ).filter(conditionKindIsNotNever);
 
-  return R.any(conditionKindIsAny, ls)
-    ? anyCondition
-    : new OrCondition(first, ...rest);
+  if (R.any(conditionKindIsAny, ls)) {
+    return anyCondition();
+  } else {
+    const hd = R.head(ls);
+    if (hd === undefined) {
+      return neverCondition();
+    } else {
+      const tl = R.tail(ls);
+      return R.isEmpty(tl) ? hd : new OrCondition(hd, ...tl);
+    }
+  }
 };
 
-export const makeEntryCondition = (entryKind: vle.EntryKind): Condition =>
+export const entryCondition = (entryKind: vle.EntryKind): Condition =>
   new EntryCondition(entryKind);
 
-export const makeCategoryCondition = (category: vle.Category): Condition =>
+export const categoryCondition = (category: vle.Category): Condition =>
   new CategoryCondition(category);
 
-const makeFieldEqualConditionM = (
+const fieldEqualConditionM = (
   mapper: TextMapper,
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   search: string
@@ -240,17 +291,17 @@ const makeFieldEqualConditionM = (
   );
 };
 
-export const makeFieldEqualCondition = (
+export const fieldEqualCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   search: string
-): Condition => makeFieldEqualConditionM(R.toLower, fieldKeys, search);
+): Condition => fieldEqualConditionM(R.toLower, fieldKeys, search);
 
-export const makeCaseSensitiveFieldEqualCondition = (
+export const caseSensitiveFieldEqualCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   search: string
-): Condition => makeFieldEqualConditionM(R.identity, fieldKeys, search);
+): Condition => fieldEqualConditionM(R.identity, fieldKeys, search);
 
-const makeFieldIncludeConditionM = (
+const fieldIncludeConditionM = (
   mapper: TextMapper,
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   search: string
@@ -263,17 +314,17 @@ const makeFieldIncludeConditionM = (
   );
 };
 
-export const makeFieldIncludeCondition = (
+export const fieldIncludeCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   search: string
-): Condition => makeFieldIncludeConditionM(R.toLower, fieldKeys, search);
+): Condition => fieldIncludeConditionM(R.toLower, fieldKeys, search);
 
-export const makeCaseSensitiveFieldIncludeCondition = (
+export const caseSensitiveFieldIncludeCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   search: string
-): Condition => makeFieldIncludeConditionM(R.identity, fieldKeys, search);
+): Condition => fieldIncludeConditionM(R.identity, fieldKeys, search);
 
-export const makeFieldMatchCondition = (
+export const fieldMatchCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   pattern: RegExp
 ): Condition => {
@@ -284,7 +335,7 @@ export const makeFieldMatchCondition = (
   );
 };
 
-const makeFallbackFieldMatchConditionM = (
+const fallbackFieldMatchConditionM = (
   mapper: TextMapper,
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   patternText: string,
@@ -292,20 +343,20 @@ const makeFallbackFieldMatchConditionM = (
 ): Condition => {
   try {
     const pattern = new RegExp(patternText, patternFlags);
-    return makeFieldMatchCondition(fieldKeys, pattern);
+    return fieldMatchCondition(fieldKeys, pattern);
   } catch (_) {
-    return makeFieldIncludeConditionM(mapper, fieldKeys, patternText);
+    return fieldIncludeConditionM(mapper, fieldKeys, patternText);
   }
 };
 
-export const makeFallbackFieldMatchCondition = (
+export const fallbackFieldMatchCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   patternText: string
 ): Condition =>
-  makeFallbackFieldMatchConditionM(R.toLower, fieldKeys, patternText, 'i');
+  fallbackFieldMatchConditionM(R.toLower, fieldKeys, patternText, 'i');
 
-export const makeCaseSensitiveFallbackFieldMatchCondition = (
+export const caseSensitiveFallbackFieldMatchCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   patternText: string
 ): Condition =>
-  makeFallbackFieldMatchConditionM(R.identity, fieldKeys, patternText, '');
+  fallbackFieldMatchConditionM(R.identity, fieldKeys, patternText, '');

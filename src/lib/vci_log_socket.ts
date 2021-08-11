@@ -47,22 +47,18 @@ const parseLogEntry = (data: WebSocket.Data): vle.Entry => {
   if (data instanceof ArrayBuffer) {
     try {
       const decoded = decode(new Uint8Array(data));
-      return vle.Entry.fromStructure(decoded);
+      return vle.fromStructure(decoded);
     } catch (err) {
-      return vle.Entry.fromText(
+      return vle.fromText(
         vle.EntryKind.Notification,
         vle.LogLevel.Error,
         `[Unsupported data format: ${err}]`
       );
     }
   } else if (typeof data === 'string') {
-    return vle.Entry.fromText(
-      vle.EntryKind.Notification,
-      vle.LogLevel.Error,
-      data
-    );
+    return vle.fromText(vle.EntryKind.Notification, vle.LogLevel.Error, data);
   } else {
-    return vle.Entry.fromText(
+    return vle.fromText(
       vle.EntryKind.Notification,
       vle.LogLevel.Error,
       `[Unsupported data format: ${typeof data}]`
@@ -74,7 +70,7 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
   const loggerAddress = /^\w+:\/\/./i.test(url) ? url : `ws://${url}`;
 
   listener.next(
-    vle.Entry.fromText(
+    vle.fromText(
       vle.EntryKind.Notification,
       vle.LogLevel.Info,
       `${SocketMessage.Connecting}... [${loggerAddress}]`
@@ -90,7 +86,7 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
       alreadyClosed = true;
 
       listener.next(
-        vle.Entry.fromText(
+        vle.fromText(
           vle.EntryKind.Notification,
           vle.LogLevel.Info,
           SocketMessage.Disconnected
@@ -103,7 +99,7 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
 
   sock.onopen = (_event) => {
     listener.next(
-      vle.Entry.fromText(
+      vle.fromText(
         vle.EntryKind.Notification,
         vle.LogLevel.Info,
         SocketMessage.Connected
@@ -119,7 +115,7 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
     const msg =
       SocketMessage.Error + (event.message ? `[${event.message}]` : '');
     listener.next(
-      vle.Entry.fromText(vle.EntryKind.Notification, vle.LogLevel.Error, msg)
+      vle.fromText(vle.EntryKind.Notification, vle.LogLevel.Error, msg)
     );
   };
 
@@ -151,7 +147,7 @@ const model = (request$: xs<SocketRequest>) => {
                 so = makeSocket(request.url, listener);
               } catch (err) {
                 listener.next(
-                  vle.Entry.fromText(
+                  vle.fromText(
                     vle.EntryKind.Notification,
                     vle.LogLevel.Error,
                     `${SocketMessage.Error}[${err}]`
@@ -190,10 +186,7 @@ const model = (request$: xs<SocketRequest>) => {
   return response$.remember();
 };
 
-export const makeVciLogSocketInputDriver = (): ReturnType<typeof adapt> => {
-  const socketDriver = (request$: xs<SocketRequest>) => {
+export const makeVciLogSocketInputDriver =
+  (): ReturnType<typeof adapt> => (request$: xs<SocketRequest>) => {
     return adapt(model(request$));
   };
-
-  return socketDriver;
-};

@@ -5,22 +5,22 @@ interface PartialPackageJson {
   version: string;
 }
 
-const string_value = (value: string) => {
+const stringValue = (value: string) => {
   const s = JSON.stringify(value ?? '');
   return `'${s.substring(1, s.length - 1)}'`;
 }
 
-const package_info_code = async (file_name: string) => {
-  const content = await fs.readFile(file_name, 'utf-8');
-  const package_json = JSON.parse(content) as PartialPackageJson;
+const packageInfoCode = async (fileName: string) => {
+  const content = await fs.readFile(fileName, 'utf-8');
+  const packageJson = JSON.parse(content) as PartialPackageJson;
   return `export const packageInfo = {
-  name: ${string_value(package_json.name)},
-  version: ${string_value(package_json.version)},
+  name: ${stringValue(packageJson.name)},
+  version: ${stringValue(packageJson.version)},
 } as const;
 `;
 };
 
 (async () => {
-  const code = await package_info_code('package.json');
+  const code = await packageInfoCode('package.json');
   await fs.writeFile('./src/lib/package_info.ts', code, 'utf-8');
 })();

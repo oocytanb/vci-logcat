@@ -2,9 +2,8 @@ import * as R from 'ramda';
 import { Command, Option } from 'commander';
 
 import { packageInfo } from './package_info';
-import { vle, vlc } from '.';
-import { EntryTextFormatter } from './vci_log_entry_formatter';
-import { makeAndCondition, makeOrCondition } from './vci_log_condition';
+import * as vle from './vci_log_entry_formatter';
+import * as vlc from './vci_log_condition';
 
 export type ProgramOptions = {
   readonly cmd: Command;
@@ -23,7 +22,7 @@ export const OutputFormat = {
 
 export type OutputFormat = typeof OutputFormat[keyof typeof OutputFormat];
 
-const formatterMap: Readonly<Record<string, EntryTextFormatter>> = {
+const formatterMap: Readonly<Record<string, vle.EntryTextFormatter>> = {
   [OutputFormat.JsonRecord]: vle.jsonRecordFormatter,
   [OutputFormat.FullText]: vle.consoleStyledFullTextFormatter,
 };
@@ -40,13 +39,13 @@ const fieldTextKeys = [
   vle.FieldKey.Message,
 ] as const;
 
-const makeCondition = (() => {
+const buildConditionalExpression = (() => {
   const allWarningsCondition = (enabled: boolean, condition: vlc.Condition) => {
     return enabled
       ? condition
-      : vlc.makeAndCondition(
+      : vlc.andCondition(
           condition,
-          vlc.makeNotCondition(vlc.overFrameTimeWarningCondition)
+          vlc.notCondition(vlc.overFrameTimeWarningCondition())
         );
   };
 
@@ -56,11 +55,9 @@ const makeCondition = (() => {
   ) => {
     return enabled
       ? condition
-      : vlc.makeAndCondition(
+      : vlc.andCondition(
           condition,
-          vlc.makeNotCondition(
-            vlc.makeCategoryCondition(vle.Category.SystemStatus)
-          )
+          vlc.notCondition(vlc.categoryCondition(vle.Category.SystemStatus))
         );
   };
 
@@ -69,12 +66,12 @@ const makeCondition = (() => {
     condition: vlc.Condition
   ) => {
     return enabled
-      ? vlc.makeAndCondition(
+      ? vlc.andCondition(
           condition,
-          vlc.makeNotCondition(
-            vlc.makeOrCondition(
-              vlc.makeCategoryCondition(vle.Category.Item_State),
-              vlc.makeCategoryCondition(vle.Category.SharedVariable)
+          vlc.notCondition(
+            vlc.orCondition(
+              vlc.categoryCondition(vle.Category.Item_State),
+              vlc.categoryCondition(vle.Category.SharedVariable)
             )
           )
         )
@@ -88,11 +85,11 @@ const makeCondition = (() => {
     condition: vlc.Condition
   ) =>
     search
-      ? vlc.makeAndCondition(
+      ? vlc.andCondition(
           condition,
           regexEnabled
-            ? vlc.makeFallbackFieldMatchCondition(fieldKeys, search)
-            : vlc.makeFieldIncludeCondition(fieldKeys, search)
+            ? vlc.fallbackFieldMatchCondition(fieldKeys, search)
+            : vlc.fieldIncludeCondition(fieldKeys, search)
         )
       : condition;
 
@@ -103,23 +100,21 @@ const makeCondition = (() => {
     condition: vlc.Condition
   ) =>
     search
-      ? vlc.makeAndCondition(
+      ? vlc.andCondition(
           condition,
-          vlc.makeNotCondition(
+          vlc.notCondition(
             regexEnabled
-              ? vlc.makeFallbackFieldMatchCondition(fieldKeys, search)
-              : vlc.makeFieldIncludeCondition(fieldKeys, search)
+              ? vlc.fallbackFieldMatchCondition(fieldKeys, search)
+              : vlc.fieldIncludeCondition(fieldKeys, search)
           )
         )
       : condition;
 
   const notificationCondition = (condition: vlc.Condition) => {
-    return condition.kind == vlc.ConditionKind.Any
-      ? condition
-      : vlc.makeOrCondition(
-          vlc.makeEntryCondition(vle.EntryKind.Notification),
-          condition
-        );
+    return vlc.orCondition(
+      condition,
+      vlc.entryCondition(vle.EntryKind.Notification)
+    );
   };
 
   return (cmd: Command): vlc.Condition => {
@@ -129,20 +124,20 @@ const makeCondition = (() => {
       fieldTextKeys,
       opts.includeText ?? '',
       !!opts.regexSearch,
-      vlc.anyCondition
+      vlc.anyCondition()
     );
 
     const iic = fieldIncludeCondition(
       [vle.FieldKey.Item],
       opts.includeItem ?? '',
       !!opts.regexSearch,
-      vlc.anyCondition
+      vlc.anyCondition()
     );
 
     const ic =
       opts.includeText && opts.includeItem
-        ? makeOrCondition(itc, iic)
-        : makeAndCondition(itc, iic);
+        ? vlc.orCondition(itc, iic)
+        : vlc.andCondition(itc, iic);
 
     return R.pipe(
       R.partial(excludeTextCondition, [
@@ -205,7 +200,7 @@ export const makeProgramOptions = (argv: Array<string>): ProgramOptions => {
       : OutputFormat.Default
   );
 
-  const condition = makeCondition(cmd);
+  const condition = buildConditionalExpression(cmd);
 
   return { cmd, url, logFormatter, condition };
 };
