@@ -2,7 +2,7 @@
   "private": true,
   "name": "vci-logcat",
   "description": "VCI logcat",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "author": "oO",
   "license": "MIT",
   "repository": {
@@ -26,7 +26,7 @@
     "lint:fix": "prettier --write src spec && eslint . --fix",
     "test:package_info": "mocha --exclude './**' --file ./spec/package_info.spec.ts",
     "test": "mocha",
-    "start": "ts-node ./src/node_cli/cli_main.ts",
+    "start": "ts-node ./src/node/cli_main.ts",
     "retail": "node ./bin/vci-logcat",
     "coverage": "nyc npm run test",
     "coverage:clean": "rimraf .nyc_output coverage",

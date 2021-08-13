@@ -22,6 +22,12 @@ cd vci-logcat
 npm install
 ```
 
+Build
+
+```
+npm run build
+```
+
 ## Settings
 
 - [VCAS クライアントの設定から、WebSocket ロガーをホストするポートを設定します。](https://virtualcast.jp/wiki/virtualcast/setting/vci/logger)
@@ -94,6 +100,14 @@ npm start -- -s -I "foo"
 
     システムステータスのログを出力します。
 
+- `--version`
+
+    バージョン情報を出力します。
+
+- `--help`
+
+    ヘルプ情報を出力します。
+
 ## Tips
 
 - VCI スクリプトから `print` する内容が、以下の形式で始まる場合、ログレベルとして扱われます。
@@ -128,7 +142,7 @@ npm start -- -s -I "foo"
                     "<node_internals>/**"
                 ],
                 "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
-                "program": "${workspaceFolder}/src/node_cli/cli_main.ts",
+                "program": "${workspaceFolder}/src/node/cli_main.ts",
                 "args": ["-c", "ws://localhost:8080"]
             }
         ]

@@ -1,9 +1,12 @@
 import * as R from 'ramda';
 
+import { packageInfo } from '../src/lib//package_info';
+
 import { FieldKey } from '../src/lib/vci_log_entry_formatter';
 
 import { ConditionKind, Condition } from '../src/lib/vci_log_condition';
 
+export const appCommandArgv: ReadonlyArray<string> = ['node', packageInfo.name];
 export const timeFormatPattern = /^\d{2}:\d{2}:\d{2}/;
 export const timeFormatLength = 8;
 

@@ -14,16 +14,17 @@ import { ConditionKind } from '../src/lib/vci_log_condition';
 import { makeProgramOptions } from '../src/lib/program_options';
 
 import {
+  appCommandArgv,
   timeFormatPattern,
   parseFullText,
   ckNode,
 } from './log_entry_test_util';
 
 describe('program_options', () => {
-  const appCommandArgv = ['node', 'vci-logcat'];
-
   it('makeProgramOptions default', () => {
-    const { condition, logFormatter, url } = makeProgramOptions(appCommandArgv);
+    const { condition, logFormatter, url } = makeProgramOptions([
+      ...appCommandArgv,
+    ]);
 
     assert.strictEqual(url, 'ws://localhost:8080');
 
