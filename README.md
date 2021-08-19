@@ -19,7 +19,7 @@
 ```
 git clone https://github.com/oocytanb/vci-logcat.git
 cd vci-logcat
-npm install
+npm ci
 ```
 
 Build
