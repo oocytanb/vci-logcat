@@ -26,6 +26,7 @@ Build
 
 ```
 npm run build
+npx pkg .
 ```
 
 ## Settings

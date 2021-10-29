@@ -2,17 +2,22 @@
   "private": true,
   "name": "vci-logcat",
   "description": "VCI logcat",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "author": "oO",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/oocytanb/vci-logcat.git"
   },
-  "main": "bin/index.js",
-  "types": "bin/index.d.ts",
+  "bin": "bin/vci-logcat",
+  "main": "bin/lib/index.js",
+  "types": "bin/lib/index.d.ts",
   "engines": {
     "node": ">=16.0.0"
+  },
+  "pkg": {
+    "scripts": "bin/**/*.js",
+    "outputPath": "dist"
   },
   "files": [
     "bin",
@@ -30,7 +35,7 @@
     "retail": "node ./bin/vci-logcat",
     "coverage": "nyc npm run test",
     "coverage:clean": "rimraf .nyc_output coverage",
-    "clean": "rimraf ./bin/*/ && npm run coverage:clean",
+    "clean": "rimraf ./bin/*/ && rimraf ./dist && npm run coverage:clean",
     "build:package_info": "ts-node ./build_scripts/generate_package_info.ts",
     "build": "npm run build:package_info && npm run lint:fix && npm run clean && tsc",
     "pack:d": "npm pack --dry-run"
@@ -40,10 +45,10 @@
     "@types/chai": "^4.2.21",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.4.8",
-    "@typescript-eslint/eslint-plugin": "^4.28.5",
-    "@typescript-eslint/parser": "^4.28.5",
+    "@typescript-eslint/eslint-plugin": "^5.2.0",
+    "@typescript-eslint/parser": "^5.2.0",
     "chai": "^4.3.4",
-    "eslint": "^7.32.0",
+    "eslint": "^8.1.0",
     "eslint-config-prettier": "^8.3.0",
     "nyc": "^15.1.0",
     "prettier": "^2.3.2",
@@ -55,7 +60,7 @@
     "@cycle/run": "^5.5.0",
     "@types/msgpack-lite": "^0.1.8",
     "@types/ramda": "^0.27.44",
-    "@types/ws": "^7.4.7",
+    "@types/ws": "^8.2.0",
     "chalk": "^4.1.2",
     "commander": "^8.1.0",
     "isomorphic-ws": "^4.0.1",
