@@ -27,7 +27,7 @@ const formatterMap: Readonly<Record<string, vle.EntryTextFormatter>> = {
   [OutputFormat.FullText]: vle.consoleStyledFullTextFormatter,
 };
 
-const selectOutputFormatter = R.cond<string, vle.EntryTextFormatter>([
+const selectOutputFormatter = R.cond<string[], vle.EntryTextFormatter>([
   [(key) => !!formatterMap[key], (key) => formatterMap[key]],
   [R.T, R.always(vle.consoleStyledDefaultTextFormatter)],
 ]);

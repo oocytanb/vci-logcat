@@ -2,7 +2,7 @@
   "private": true,
   "name": "vci-logcat",
   "description": "VCI logcat",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "author": "oO",
   "license": "MIT",
   "repository": {
@@ -22,9 +22,6 @@
   "files": [
     "bin",
     "src"
-  ],
-  "keywords": [
-    "vci"
   ],
   "scripts": {
     "lint": "eslint . && prettier -c src spec",
@@ -59,16 +56,48 @@
   "dependencies": {
     "@cycle/run": "^5.5.0",
     "@types/msgpack-lite": "^0.1.8",
-    "@types/ramda": "^0.27.44",
+    "@types/ramda": "^0.28.7",
     "@types/ws": "^8.2.0",
     "chalk": "^4.1.2",
-    "commander": "^8.1.0",
+    "commander": "^9.1.0",
     "isomorphic-ws": "^4.0.1",
     "mocha": "^9.0.3",
     "moment": "^2.29.1",
     "msgpack-lite": "^0.1.26",
-    "ramda": "^0.27.1",
+    "ramda": "^0.28.0",
     "ws": "^8.0.0",
     "xstream": "^11.14.0"
+  },
+  "keywords": [
+    "vci"
+  ],
+  "prettier": {
+    "singleQuote": true
+  },
+  "eslintConfig": {
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "parserOptions": {
+        "ecmaVersion": 2020,
+        "sourceType": "script"
+      }
+    },
+    "plugins": [
+      "@typescript-eslint"
+    ],
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended",
+      "prettier"
+    ],
+    "rules": {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ]
+    }
   }
 }
