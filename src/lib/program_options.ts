@@ -12,7 +12,7 @@ export type ProgramOptions = {
   readonly condition: vlc.Condition;
 };
 
-const defaultUrl = 'ws://localhost:8080';
+const defaultUrl = 'ws://127.0.0.1:8080';
 
 export const OutputFormat = {
   Default: 'default',

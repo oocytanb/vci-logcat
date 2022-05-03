@@ -61,19 +61,21 @@ npm start -- -A
 ```
 
 オプションの使用例 2:  
-`vci.state` と `vci.studio.shared` のログを抑制し、かつ `foo` というテキストが含まれるログを出力します。
+`foo` というテキストが含まれるログを出力します。
 
 ```
-npm start -- -s -I "foo"
+npm start -- -I "foo"
 ```
 
 ### Options
 
 - `-c <url>`
 
-    接続先を指定します。既定値は `ws://localhost:8080` です。
+    接続先を指定します。既定値は `ws://127.0.0.1:8080` です。
 
 - `-s`
+
+    **注: VCAS がログ出力しなくなったため、廃止します。**
 
     `vci.state` と `vci.studio.shared` のログを抑制します。
 
@@ -150,7 +152,7 @@ npm start -- -s -I "foo"
                 ],
                 "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
                 "program": "${workspaceFolder}/src/node/cli_main.ts",
-                "args": ["-c", "ws://localhost:8080"]
+                "args": ["-c", "ws://127.0.0.1:8080"]
             }
         ]
     }
