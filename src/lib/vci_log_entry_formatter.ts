@@ -16,6 +16,7 @@ export const defaultFieldList: ReadonlyArray<FieldKey> = [
   FieldKey.LogLevel,
   FieldKey.Category,
   FieldKey.Item,
+  FieldKey.VciId,
   FieldKey.Message,
 ];
 
@@ -41,11 +42,8 @@ type FieldTextFormatter = (
   entry: Entry
 ) => string | undefined;
 
-const plainFieldTextFormatter = (
-  value: string | undefined,
-  _key: string,
-  _entry: Entry
-): string | undefined => value;
+const plainFieldTextFormatter: FieldTextFormatter = (value, _key, _entry) =>
+  value;
 
 const consoleStylerMap: Readonly<
   Partial<Record<LogLevel, (value: string) => string>>
@@ -56,11 +54,11 @@ const consoleStylerMap: Readonly<
   [LogLevel.Info]: chalk.black.bgGreenBright,
 };
 
-const consoleStyledFieldTextFormatter = (
-  value: string | undefined,
-  key: string,
+const consoleStyledFieldTextFormatter: FieldTextFormatter = (
+  value,
+  key,
   entry: Entry
-): string | undefined => {
+) => {
   if (value !== undefined && key === FieldKey.LogLevel) {
     const styler = consoleStylerMap[roundLogLevel(entry.logLevel)];
     return styler ? styler(value) : value;

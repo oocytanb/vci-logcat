@@ -283,4 +283,77 @@ describe('vle formatter', () => {
       Message: '[TRAce] tr_msg',
     });
   });
+
+  it('format VciId', () => {
+    const e = make(
+      EntryKind.Logger,
+      {
+        LogLevel: 'Debug',
+        Message: '[TRAce] tr_msg',
+        VciId: '12345678abcd1234abcd1234567890ab',
+      },
+      '12345678'
+    );
+
+    assert.strictEqual(defaultTextFormatter(e), 'Trace | 12345678 |  tr_msg');
+
+    assert.strictEqual(
+      consoleStyledDefaultTextFormatter(e),
+      defaultTextFormatter(e)
+    );
+
+    const [ft, ft_time] = parseFullText(fullTextFormatter(e));
+    assert.deepStrictEqual(ft, {
+      LogLevel: 'Trace',
+      VciId: '12345678',
+      Message: ' tr_msg',
+    });
+    assert.isUndefined(ft_time);
+
+    const [cft, cft_time] = parseFullText(consoleStyledFullTextFormatter(e));
+    assert.deepStrictEqual(cft, ft);
+    assert.strictEqual(cft_time, ft_time);
+
+    assert.deepStrictEqual(JSON.parse(jsonRecordFormatter(e)), {
+      LogLevel: 'Debug',
+      VciId: '12345678abcd1234abcd1234567890ab',
+      Message: '[TRAce] tr_msg',
+    });
+  });
+
+  it('format VciId no-simpleVciId', () => {
+    const e = make(EntryKind.Logger, {
+      LogLevel: 'Debug',
+      Message: '[TRAce] tr_msg',
+      VciId: '12345678abcd1234abcd1234567890ab',
+    });
+
+    assert.strictEqual(
+      defaultTextFormatter(e),
+      'Trace | 12345678abcd1234abcd1234567890ab |  tr_msg'
+    );
+
+    assert.strictEqual(
+      consoleStyledDefaultTextFormatter(e),
+      defaultTextFormatter(e)
+    );
+
+    const [ft, ft_time] = parseFullText(fullTextFormatter(e));
+    assert.deepStrictEqual(ft, {
+      LogLevel: 'Trace',
+      VciId: '12345678abcd1234abcd1234567890ab',
+      Message: ' tr_msg',
+    });
+    assert.isUndefined(ft_time);
+
+    const [cft, cft_time] = parseFullText(consoleStyledFullTextFormatter(e));
+    assert.deepStrictEqual(cft, ft);
+    assert.strictEqual(cft_time, ft_time);
+
+    assert.deepStrictEqual(JSON.parse(jsonRecordFormatter(e)), {
+      LogLevel: 'Debug',
+      VciId: '12345678abcd1234abcd1234567890ab',
+      Message: '[TRAce] tr_msg',
+    });
+  });
 });

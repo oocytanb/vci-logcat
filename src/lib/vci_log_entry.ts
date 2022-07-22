@@ -1,6 +1,27 @@
 import * as R from 'ramda';
 import moment from 'moment';
 
+export type VciIdMap = Map<string, string>;
+
+export const leadingVciId = (vciId: string): string => {
+  return vciId.length <= 8 ? vciId : vciId.substring(0, 8);
+};
+
+export const simplifyVciId = (
+  vciId: string,
+  idMap: VciIdMap
+): [string, VciIdMap] => {
+  const shortId = leadingVciId(vciId);
+  const prev = idMap.get(shortId);
+  if (prev === undefined) {
+    const d = new Map(idMap);
+    d.set(shortId, vciId);
+    return [shortId, d];
+  } else {
+    return [prev === vciId ? shortId : vciId, idMap];
+  }
+};
+
 export const EntryKind = {
   Unknown: 'unknown',
   Logger: 'logger',
@@ -19,6 +40,7 @@ export const FieldKey = {
   CallerFile: 'CallerFile',
   CallerLine: 'CallerLine',
   CallerMember: 'CallerMember',
+  VciId: 'VciId',
 } as const;
 
 export type FieldKey = typeof FieldKey[keyof typeof FieldKey];
@@ -126,10 +148,15 @@ export interface Entry {
   readonly logLevel: number;
   readonly category: Category;
   readonly message: string;
+  readonly simpleVciId?: string;
   readonly fields: Fields;
 }
 
-export const make = (kind: EntryKind, fields?: Readonly<Fields>): Entry => {
+export const make = (
+  kind: EntryKind,
+  fields?: Readonly<Fields>,
+  simpleVciId?: string
+): Entry => {
   const mFields = Object.assign({}, fields);
 
   const mUnixTime = mFields.UnixTime;
@@ -157,8 +184,20 @@ export const make = (kind: EntryKind, fields?: Readonly<Fields>): Entry => {
     category,
     logLevel,
     message,
+    simpleVciId,
     fields: mFields,
   };
+};
+
+const makeFromFields = (
+  kind: EntryKind,
+  fields: Fields,
+  idMap: VciIdMap
+): [Entry, VciIdMap] => {
+  const vciId_ = fields[FieldKey.VciId];
+  const [simpleVciId, newIdMap] =
+    vciId_ === undefined ? [undefined, idMap] : simplifyVciId(vciId_, idMap);
+  return [make(kind, fields, simpleVciId), newIdMap];
 };
 
 export const fromText = (
@@ -171,44 +210,60 @@ export const fromText = (
     Message: text,
   });
 
-const parseFields = (fieldsNode: unknown): Entry =>
-  R.is(Object, fieldsNode)
-    ? make(
-        EntryKind.Logger,
-        R.mapObjIndexed(
-          (v, k) =>
-            k === FieldKey.Message && typeof v === 'string'
-              ? parseMessageField(v)
-              : String(v),
-          fieldsNode as Record<string, unknown>
-        )
-      )
-    : fromText(
-        EntryKind.Notification,
-        LogLevel.Error,
-        EntryMessage.UnsupportedDataFormat
-      );
+const fieldMapper = (v: unknown, k: string) =>
+  k === FieldKey.Message && typeof v === 'string'
+    ? parseMessageField(v)
+    : String(v);
 
-export const fromStructure = (data: unknown): Entry =>
+const parseFields = (fieldsNode: unknown, idMap: VciIdMap): [Entry, VciIdMap] =>
+  R.is(Object, fieldsNode)
+    ? makeFromFields(
+        EntryKind.Logger,
+        R.mapObjIndexed(fieldMapper, fieldsNode as Record<string, unknown>),
+        idMap
+      )
+    : [
+        fromText(
+          EntryKind.Notification,
+          LogLevel.Error,
+          EntryMessage.UnsupportedDataFormat
+        ),
+        idMap,
+      ];
+
+export const fromStructure2 = (
+  data: unknown,
+  idMap: VciIdMap
+): [Entry, VciIdMap] =>
   Array.isArray(data) &&
   data.length >= 3 &&
   data[1] === 'logger' &&
   Array.isArray(data[2]) &&
   !R.isEmpty(data[2])
-    ? parseFields(data[2][0])
-    : fromText(
-        EntryKind.Notification,
-        LogLevel.Error,
-        EntryMessage.UnsupportedDataFormat
-      );
+    ? parseFields(data[2][0], idMap)
+    : [
+        fromText(
+          EntryKind.Notification,
+          LogLevel.Error,
+          EntryMessage.UnsupportedDataFormat
+        ),
+        idMap,
+      ];
+
+/**
+ * @deprecated Use `fromStructure2`
+ */
+export const fromStructure = (data: unknown) =>
+  fromStructure2(data, new Map<string, string>())[0];
 
 const immediateFieldMap: Readonly<
-  Partial<Record<FieldKey, (entry: Entry) => string>>
+  Partial<Record<FieldKey, (entry: Entry) => string | undefined>>
 > = {
   LogLevel: (entry) => logLevelToLabel(entry.logLevel),
   Message: (entry) => entry.message,
   Category: (entry) => entry.category,
   UnixTime: (entry) => formatTimestamp(entry.timestamp),
+  VciId: (entry) => entry.simpleVciId ?? entry.fields[FieldKey.VciId],
 };
 
 export const fieldText = (

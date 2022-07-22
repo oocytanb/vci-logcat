@@ -38,9 +38,10 @@ export const makeDisconnectRequest = (): SocketDisconnectRequest => ({
   kind: SocketRequestKind.Disconnect,
 });
 
-export const parseLogEntry = (
-  data: Uint8Array | ArrayBuffer | unknown
-): vle.Entry => {
+export const parseLogEntry2 = (
+  data: Uint8Array | ArrayBuffer | unknown,
+  idMap: vle.VciIdMap
+): [vle.Entry, vle.VciIdMap] => {
   const buffer =
     data instanceof Uint8Array
       ? data
@@ -53,21 +54,36 @@ export const parseLogEntry = (
   if (buffer) {
     try {
       const decoded = decode(buffer);
-      return vle.fromStructure(decoded);
+      return vle.fromStructure2(decoded, idMap);
     } catch (err) {
-      return vle.fromText(
-        vle.EntryKind.Notification,
-        vle.LogLevel.Error,
-        `${vle.EntryMessage.UnsupportedDataFormat} ${err}`
-      );
+      return [
+        vle.fromText(
+          vle.EntryKind.Notification,
+          vle.LogLevel.Error,
+          `${vle.EntryMessage.UnsupportedDataFormat} ${err}`
+        ),
+        idMap,
+      ];
     }
   } else if (typeof data === 'string') {
-    return vle.fromText(vle.EntryKind.Notification, vle.LogLevel.Error, data);
+    return [
+      vle.fromText(vle.EntryKind.Notification, vle.LogLevel.Error, data),
+      idMap,
+    ];
   } else {
-    return vle.fromText(
-      vle.EntryKind.Notification,
-      vle.LogLevel.Error,
-      `${vle.EntryMessage.UnsupportedDataFormat} ${typeof data}`
-    );
+    return [
+      vle.fromText(
+        vle.EntryKind.Notification,
+        vle.LogLevel.Error,
+        `${vle.EntryMessage.UnsupportedDataFormat} ${typeof data}`
+      ),
+      idMap,
+    ];
   }
 };
+
+/**
+ * @deprecated Use `parseLogEntry2`
+ */
+export const parseLogEntry = (data: Uint8Array | ArrayBuffer | unknown) =>
+  parseLogEntry2(data, new Map<string, string>())[0];

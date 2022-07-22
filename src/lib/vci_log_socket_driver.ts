@@ -8,11 +8,13 @@ import {
   SocketMessage,
   SocketRequestKind,
   SocketRequest,
-  parseLogEntry,
+  parseLogEntry2,
 } from './vci_log_socket_data';
 
 const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
   const loggerAddress = /^\w+:\/\/./i.test(url) ? url : `ws://${url}`;
+
+  let vciIdMap: vle.VciIdMap = new Map<string, string>();
 
   listener.next(
     vle.fromText(
@@ -65,7 +67,9 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
   };
 
   sock.onmessage = (event) => {
-    listener.next(parseLogEntry(event.data));
+    const [entry, newIdMap] = parseLogEntry2(event.data, vciIdMap);
+    vciIdMap = newIdMap;
+    listener.next(entry);
   };
 
   return {

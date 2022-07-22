@@ -82,12 +82,12 @@ npm start -- -I "foo"
 - `-I <text>`
 
     指定したテキストが含まれるログを出力します。
-    対象のフィールドは (`Message`, `Item`, `Category`, `LogLevel`) です。
+    対象のフィールドは (`Message`, `Item`, `Category`, `LogLevel`, `VciId`) です。
 
 - `-X <text>`
 
     指定したテキストが含まれるログを除外して出力します。
-    対象のフィールドは (`Message`, `Item`, `Category`, `LogLevel`) です。
+    対象のフィールドは (`Message`, `Item`, `Category`, `LogLevel`, `VciId`) です。
 
 - `-i <name>`
 
@@ -143,17 +143,10 @@ npm start -- -I "foo"
     {
         "version": "0.2.0",
         "configurations": [
-            {
-                "type": "pwa-node",
-                "request": "launch",
-                "name": "Launch Program",
-                "skipFiles": [
-                    "<node_internals>/**"
-                ],
-                "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
-                "program": "${workspaceFolder}/src/node/cli_main.ts",
-                "args": ["-c", "ws://127.0.0.1:8080"]
-            }
+            "command": "npm start -- -c ws://127.0.0.1:8080",
+            "name": "Run vci-logcat",
+            "request": "launch",
+            "type": "node-terminal"
         ]
     }
     ```

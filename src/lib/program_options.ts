@@ -36,6 +36,7 @@ const fieldTextKeys = [
   vle.FieldKey.LogLevel,
   vle.FieldKey.Category,
   vle.FieldKey.Item,
+  vle.FieldKey.VciId,
   vle.FieldKey.Message,
 ] as const;
 
@@ -182,7 +183,7 @@ export const makeProgramOptions = (argv: Array<string>): ProgramOptions => {
     .option('--output-system-status', 'output the system status')
     .option(
       '-s, --suppress-state-shared-variable',
-      'suppress "Item_State" and "SharedVariable" categories'
+      '**OBSOLETED** suppress "Item_State" and "SharedVariable" categories'
     )
     .option('-I, --include-text <text>', 'specify the text to include')
     .option('-X, --exclude-text <text>', 'specify the text to exclude')
