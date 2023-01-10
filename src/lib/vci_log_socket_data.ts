@@ -16,7 +16,7 @@ export const SocketRequestKind = {
 } as const;
 
 export type SocketRequestKind =
-  typeof SocketRequestKind[keyof typeof SocketRequestKind];
+  (typeof SocketRequestKind)[keyof typeof SocketRequestKind];
 
 export type SocketConnectRequest = Readonly<{
   kind: typeof SocketRequestKind.Connect;

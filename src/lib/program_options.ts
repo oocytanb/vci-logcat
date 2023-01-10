@@ -20,7 +20,7 @@ export const OutputFormat = {
   FullText: 'full_text',
 } as const;
 
-export type OutputFormat = typeof OutputFormat[keyof typeof OutputFormat];
+export type OutputFormat = (typeof OutputFormat)[keyof typeof OutputFormat];
 
 const formatterMap: Readonly<Record<string, vle.EntryTextFormatter>> = {
   [OutputFormat.JsonRecord]: vle.jsonRecordFormatter,

@@ -14,7 +14,7 @@
 
 - [git](https://git-scm.com/)
 
-- [Node.js](https://nodejs.org/) >= 16
+- [Node.js](https://nodejs.org/) >= 18
 
 ```
 git clone https://github.com/oocytanb/vci-logcat.git

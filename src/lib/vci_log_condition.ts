@@ -16,7 +16,7 @@ export const ConditionKind = {
   FieldMatch: '__FIELD_MATCH',
 } as const;
 
-export type ConditionKind = typeof ConditionKind[keyof typeof ConditionKind];
+export type ConditionKind = (typeof ConditionKind)[keyof typeof ConditionKind];
 
 export interface Condition {
   readonly kind: ConditionKind;

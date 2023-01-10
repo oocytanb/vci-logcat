@@ -29,7 +29,7 @@ export const EntryKind = {
   Notification: 'notification',
 } as const;
 
-export type EntryKind = typeof EntryKind[keyof typeof EntryKind];
+export type EntryKind = (typeof EntryKind)[keyof typeof EntryKind];
 
 export const FieldKey = {
   UnixTime: 'UnixTime',
@@ -43,7 +43,7 @@ export const FieldKey = {
   VciId: 'VciId',
 } as const;
 
-export type FieldKey = typeof FieldKey[keyof typeof FieldKey];
+export type FieldKey = (typeof FieldKey)[keyof typeof FieldKey];
 
 export const Category = {
   Unknown: '',
@@ -58,7 +58,7 @@ export const Category = {
   SharedVariable: 'SharedVariable',
 } as const;
 
-export type Category = typeof Category[keyof typeof Category];
+export type Category = (typeof Category)[keyof typeof Category];
 
 export const LogLevel = {
   Fatal: 100,
@@ -69,7 +69,7 @@ export const LogLevel = {
   Trace: 600,
 } as const;
 
-export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
+export type LogLevel = (typeof LogLevel)[keyof typeof LogLevel];
 
 const lowerLogLevelMap: { readonly [key: string]: number | undefined } = {
   fatal: LogLevel.Fatal,
@@ -106,7 +106,7 @@ export const EntryMessage = {
   UnsupportedDataFormat: '[Unsupported data format]',
 } as const;
 
-export type EntryMessage = typeof EntryMessage[keyof typeof EntryMessage];
+export type EntryMessage = (typeof EntryMessage)[keyof typeof EntryMessage];
 
 const parseUnixTime = (str: string): Date => {
   return new Date(Number.parseInt(str, 10) * 1000);
