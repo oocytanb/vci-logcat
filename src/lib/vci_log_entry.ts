@@ -4,7 +4,8 @@ import moment from 'moment';
 export type VciIdMap = Map<string, string>;
 
 export const leadingVciId = (vciId: string): string => {
-  return vciId.length <= 8 ? vciId : vciId.substring(0, 8);
+  const s = vciId.replace(/-/g, '');
+  return s.length <= 7 ? s : s.substring(0, 7);
 };
 
 export const simplifyVciId = (

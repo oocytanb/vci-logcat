@@ -23,9 +23,16 @@ describe('vle VciId', () => {
   it('leadingVciId', () => {
     assert.strictEqual(leadingVciId(''), '');
     assert.strictEqual(leadingVciId('a'), 'a');
+    assert.strictEqual(leadingVciId('abcdef'), 'abcdef');
     assert.strictEqual(leadingVciId('abcdefg'), 'abcdefg');
-    assert.strictEqual(leadingVciId('abcdefgh'), 'abcdefgh');
-    assert.strictEqual(leadingVciId('abcdefghi'), 'abcdefgh');
+    assert.strictEqual(leadingVciId('abcdefgh'), 'abcdefg');
+    assert.strictEqual(leadingVciId('abcdefgh-ijkl-mnop'), 'abcdefg');
+    assert.strictEqual(leadingVciId('-'), '');
+    assert.strictEqual(leadingVciId('--'), '');
+    assert.strictEqual(leadingVciId('-ab-'), 'ab');
+    assert.strictEqual(leadingVciId('ab-cd-ef'), 'abcdef');
+    assert.strictEqual(leadingVciId('ab-cd-ef-g'), 'abcdefg');
+    assert.strictEqual(leadingVciId('ab-cd-ef-gh'), 'abcdefg');
   });
 
   it('simplifyVciId', () => {
@@ -62,18 +69,45 @@ describe('vle VciId', () => {
     }
 
     {
-      const [s, d] = simplifyVciId('abcdefghX', idm);
-      assert.strictEqual(s, 'abcdefgh');
-      assert.strictEqual(d.get('abcdefgh'), 'abcdefghX');
+      const [s, d] = simplifyVciId('abcdefgX', idm);
+      assert.strictEqual(s, 'abcdefg');
+      assert.strictEqual(d.get('abcdefg'), 'abcdefgX');
       assert.notDeepEqual(d, idm);
       idm = d;
     }
 
     {
-      const [s, d] = simplifyVciId('abcdefghY', idm);
-      assert.strictEqual(s, 'abcdefghY');
-      assert.strictEqual(d.get('abcdefgh'), 'abcdefghX');
-      assert.isUndefined(d.get('abcdefghY'));
+      const [s, d] = simplifyVciId('abcdefgY', idm);
+      assert.strictEqual(s, 'abcdefgY');
+      assert.strictEqual(d.get('abcdefg'), 'abcdefgX');
+      assert.isUndefined(d.get('abcdefgY'));
+      assert.deepEqual(d, idm);
+      idm = d;
+    }
+
+    {
+      const [s, d] = simplifyVciId('ab-cd-ef-gY', idm);
+      assert.strictEqual(s, 'ab-cd-ef-gY');
+      assert.strictEqual(d.get('abcdefg'), 'abcdefgX');
+      assert.isUndefined(d.get('ab-cd-ef-gY'));
+      assert.deepEqual(d, idm);
+      idm = d;
+    }
+
+    {
+      const [s, d] = simplifyVciId('zy-xw-vu-ts-rq-po', idm);
+      assert.strictEqual(s, 'zyxwvut');
+      assert.strictEqual(d.get('zyxwvut'), 'zy-xw-vu-ts-rq-po');
+      assert.isUndefined(d.get('zy-xw-vu-ts-rq-po'));
+      assert.notDeepEqual(d, idm);
+      idm = d;
+    }
+
+    {
+      const [s, d] = simplifyVciId('zyxwvutsrqpo', idm);
+      assert.strictEqual(s, 'zyxwvutsrqpo');
+      assert.strictEqual(d.get('zyxwvut'), 'zy-xw-vu-ts-rq-po');
+      assert.isUndefined(d.get('zyxwvutsrqpo'));
       assert.deepEqual(d, idm);
       idm = d;
     }
@@ -324,7 +358,7 @@ describe('vle Entry', () => {
         Message: 'print_message',
       });
 
-      assert.strictEqual(e.simpleVciId, '12345678');
+      assert.strictEqual(e.simpleVciId, '1234567');
       assert.notDeepEqual(d, idm);
       idm = d;
     }
@@ -406,7 +440,7 @@ describe('vle Entry', () => {
         idm
       );
 
-      assert.strictEqual(fieldText(FieldKey.VciId, e), '12345678');
+      assert.strictEqual(fieldText(FieldKey.VciId, e), '1234567');
       idm = d;
     }
 
@@ -433,6 +467,81 @@ describe('vle Entry', () => {
         fieldText(FieldKey.VciId, e),
         '1234567890EFEF1234abcd1234567890ab'
       );
+
+      idm = d;
+    }
+
+    {
+      const [e, d] = fromStructure2(
+        [
+          2,
+          'logger',
+          [
+            {
+              UnixTime: '2678450',
+              Category: 'Item_Print',
+              LogLevel: 'Debug',
+              Item: 'foo_item',
+              VciId: '12-34-56-78-90-EF-EF-12-34-ab-cd-12-34-56-78-90-ab',
+              Message: 'print_message',
+            },
+          ],
+        ],
+        idm
+      );
+
+      assert.strictEqual(
+        fieldText(FieldKey.VciId, e),
+        '12-34-56-78-90-EF-EF-12-34-ab-cd-12-34-56-78-90-ab'
+      );
+
+      idm = d;
+    }
+
+    {
+      const [e, d] = fromStructure2(
+        [
+          2,
+          'logger',
+          [
+            {
+              UnixTime: '2678450',
+              Category: 'Item_Print',
+              LogLevel: 'Debug',
+              Item: 'foo_item',
+              VciId: 'zy-xw-vu-ts-rq',
+              Message: 'print_message',
+            },
+          ],
+        ],
+        idm
+      );
+
+      assert.strictEqual(fieldText(FieldKey.VciId, e), 'zyxwvut');
+
+      idm = d;
+    }
+
+    {
+      const [e, d] = fromStructure2(
+        [
+          2,
+          'logger',
+          [
+            {
+              UnixTime: '2678450',
+              Category: 'Item_Print',
+              LogLevel: 'Debug',
+              Item: 'foo_item',
+              VciId: 'zyxwvutsrq',
+              Message: 'print_message',
+            },
+          ],
+        ],
+        idm
+      );
+
+      assert.strictEqual(fieldText(FieldKey.VciId, e), 'zyxwvutsrq');
 
       idm = d;
     }

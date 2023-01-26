@@ -1,4 +1,4 @@
 export const packageInfo = {
   name: 'vci-logcat',
-  version: '0.12.1',
+  version: '0.13.0',
 } as const;
