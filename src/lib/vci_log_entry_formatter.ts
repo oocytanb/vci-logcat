@@ -26,7 +26,7 @@ export type FieldCollector<TResult> = (
   prev: TResult,
   curr: string | undefined,
   key: string,
-  entry: Entry
+  entry: Entry,
 ) => TResult;
 
 export const fieldReducer =
@@ -39,7 +39,7 @@ export const fieldReducer =
 type FieldTextFormatter = (
   value: string | undefined,
   key: string,
-  entry: Entry
+  entry: Entry,
 ) => string | undefined;
 
 const plainFieldTextFormatter: FieldTextFormatter = (value, _key, _entry) =>
@@ -57,7 +57,7 @@ const consoleStylerMap: Readonly<
 const consoleStyledFieldTextFormatter: FieldTextFormatter = (
   value,
   key,
-  entry: Entry
+  entry: Entry,
 ) => {
   if (value !== undefined && key === FieldKey.LogLevel) {
     const styler = consoleStylerMap[roundLogLevel(entry.logLevel)];
@@ -74,44 +74,44 @@ const makeTextFormatter =
   (fieldFormatter: FieldTextFormatter, keys: ReadonlyArray<FieldKey>) =>
   (entry: Entry) =>
     R.reduce(
-      fieldReducer(
+      fieldReducer<string>(
         (prev, curr, key, entry) =>
           accumulateFieldText(prev, fieldFormatter(curr, key, entry)),
-        entry
+        entry,
       ),
       '',
-      keys
+      keys,
     );
 
 const makeFullTextFormatter =
   (fieldFormatter: FieldTextFormatter) => (entry: Entry) =>
     R.reduce(
-      fieldReducer(
+      fieldReducer<string>(
         (prev, curr, key, entry) =>
           accumulateFieldText(
             prev,
-            key + ' = ' + (fieldFormatter(curr, key, entry) ?? '')
+            key + ' = ' + (fieldFormatter(curr, key, entry) ?? ''),
           ),
-        entry
+        entry,
       ),
       '',
-      R.keys<Record<string, string>>(entry.fields)
+      R.keys<Record<string, string>>(entry.fields),
     );
 
 export const defaultTextFormatter = makeTextFormatter(
   plainFieldTextFormatter,
-  defaultFieldList
+  defaultFieldList,
 );
 
 export const consoleStyledDefaultTextFormatter = makeTextFormatter(
   consoleStyledFieldTextFormatter,
-  defaultFieldList
+  defaultFieldList,
 );
 
 export const fullTextFormatter = makeFullTextFormatter(plainFieldTextFormatter);
 
 export const consoleStyledFullTextFormatter = makeFullTextFormatter(
-  consoleStyledFieldTextFormatter
+  consoleStyledFieldTextFormatter,
 );
 
 export const jsonRecordFormatter = (entry: Entry): string =>

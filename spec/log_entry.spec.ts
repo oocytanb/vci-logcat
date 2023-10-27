@@ -303,7 +303,7 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(e.kind, EntryKind.Logger);
@@ -341,7 +341,7 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(e.kind, EntryKind.Logger);
@@ -379,7 +379,7 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(e.kind, EntryKind.Logger);
@@ -437,7 +437,7 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(fieldText(FieldKey.VciId, e), '1234567');
@@ -460,12 +460,12 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(
         fieldText(FieldKey.VciId, e),
-        '1234567890EFEF1234abcd1234567890ab'
+        '1234567890EFEF1234abcd1234567890ab',
       );
 
       idm = d;
@@ -487,12 +487,12 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(
         fieldText(FieldKey.VciId, e),
-        '12-34-56-78-90-EF-EF-12-34-ab-cd-12-34-56-78-90-ab'
+        '12-34-56-78-90-EF-EF-12-34-ab-cd-12-34-56-78-90-ab',
       );
 
       idm = d;
@@ -514,7 +514,7 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(fieldText(FieldKey.VciId, e), 'zyxwvut');
@@ -538,7 +538,7 @@ describe('vle Entry', () => {
             },
           ],
         ],
-        idm
+        idm,
       );
 
       assert.strictEqual(fieldText(FieldKey.VciId, e), 'zyxwvutsrq');

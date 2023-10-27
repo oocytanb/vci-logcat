@@ -40,7 +40,7 @@ export const makeDisconnectRequest = (): SocketDisconnectRequest => ({
 
 export const parseLogEntry2 = (
   data: Uint8Array | ArrayBuffer | unknown,
-  idMap: vle.VciIdMap
+  idMap: vle.VciIdMap,
 ): [vle.Entry, vle.VciIdMap] => {
   const buffer =
     data instanceof Uint8Array
@@ -60,7 +60,7 @@ export const parseLogEntry2 = (
         vle.fromText(
           vle.EntryKind.Notification,
           vle.LogLevel.Error,
-          `${vle.EntryMessage.UnsupportedDataFormat} ${err}`
+          `${vle.EntryMessage.UnsupportedDataFormat} ${err}`,
         ),
         idMap,
       ];
@@ -75,7 +75,7 @@ export const parseLogEntry2 = (
       vle.fromText(
         vle.EntryKind.Notification,
         vle.LogLevel.Error,
-        `${vle.EntryMessage.UnsupportedDataFormat} ${typeof data}`
+        `${vle.EntryMessage.UnsupportedDataFormat} ${typeof data}`,
       ),
       idMap,
     ];

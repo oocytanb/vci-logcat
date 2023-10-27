@@ -46,25 +46,25 @@ const buildConditionalExpression = (() => {
       ? condition
       : vlc.andCondition(
           condition,
-          vlc.notCondition(vlc.overFrameTimeWarningCondition())
+          vlc.notCondition(vlc.overFrameTimeWarningCondition()),
         );
   };
 
   const outputSystemStatusCondition = (
     enabled: boolean,
-    condition: vlc.Condition
+    condition: vlc.Condition,
   ) => {
     return enabled
       ? condition
       : vlc.andCondition(
           condition,
-          vlc.notCondition(vlc.categoryCondition(vle.Category.SystemStatus))
+          vlc.notCondition(vlc.categoryCondition(vle.Category.SystemStatus)),
         );
   };
 
   const suppressStateSharedVariableCondition = (
     enabled: boolean,
-    condition: vlc.Condition
+    condition: vlc.Condition,
   ) => {
     return enabled
       ? vlc.andCondition(
@@ -72,9 +72,9 @@ const buildConditionalExpression = (() => {
           vlc.notCondition(
             vlc.orCondition(
               vlc.categoryCondition(vle.Category.Item_State),
-              vlc.categoryCondition(vle.Category.SharedVariable)
-            )
-          )
+              vlc.categoryCondition(vle.Category.SharedVariable),
+            ),
+          ),
         )
       : condition;
   };
@@ -83,14 +83,14 @@ const buildConditionalExpression = (() => {
     fieldKeys: ReadonlyArray<vle.FieldKey>,
     search: string,
     regexEnabled: boolean,
-    condition: vlc.Condition
+    condition: vlc.Condition,
   ) =>
     search
       ? vlc.andCondition(
           condition,
           regexEnabled
             ? vlc.fallbackFieldMatchCondition(fieldKeys, search)
-            : vlc.fieldIncludeCondition(fieldKeys, search)
+            : vlc.fieldIncludeCondition(fieldKeys, search),
         )
       : condition;
 
@@ -98,7 +98,7 @@ const buildConditionalExpression = (() => {
     fieldKeys: ReadonlyArray<vle.FieldKey>,
     search: string,
     regexEnabled: boolean,
-    condition: vlc.Condition
+    condition: vlc.Condition,
   ) =>
     search
       ? vlc.andCondition(
@@ -106,15 +106,15 @@ const buildConditionalExpression = (() => {
           vlc.notCondition(
             regexEnabled
               ? vlc.fallbackFieldMatchCondition(fieldKeys, search)
-              : vlc.fieldIncludeCondition(fieldKeys, search)
-          )
+              : vlc.fieldIncludeCondition(fieldKeys, search),
+          ),
         )
       : condition;
 
   const notificationCondition = (condition: vlc.Condition) => {
     return vlc.orCondition(
       condition,
-      vlc.entryCondition(vle.EntryKind.Notification)
+      vlc.entryCondition(vle.EntryKind.Notification),
     );
   };
 
@@ -125,14 +125,14 @@ const buildConditionalExpression = (() => {
       fieldTextKeys,
       opts.includeText ?? '',
       !!opts.regexSearch,
-      vlc.anyCondition()
+      vlc.anyCondition(),
     );
 
     const iic = fieldIncludeCondition(
       [vle.FieldKey.Item],
       opts.includeItem ?? '',
       !!opts.regexSearch,
-      vlc.anyCondition()
+      vlc.anyCondition(),
     );
 
     const ic =
@@ -156,7 +156,7 @@ const buildConditionalExpression = (() => {
       R.partial(suppressStateSharedVariableCondition, [
         !!opts.suppressStateSharedVariable,
       ]),
-      notificationCondition
+      notificationCondition,
     )(ic);
   };
 })();
@@ -169,21 +169,21 @@ export const makeProgramOptions = (argv: Array<string>): ProgramOptions => {
     .option(
       '-c, --connect <url>',
       'specify the URL to connect VCI WebSocket console',
-      defaultUrl
+      defaultUrl,
     )
     .addOption(
       new Option('-f, --format <format>', 'specify the output format')
         .default(OutputFormat.Default)
-        .choices(R.values(OutputFormat))
+        .choices(R.values(OutputFormat)),
     )
     .option(
       '-A, --all-warnings',
-      'output all the warnings such as "frame: script not return"'
+      'output all the warnings such as "frame: script not return"',
     )
     .option('--output-system-status', 'output the system status')
     .option(
       '-s, --suppress-state-shared-variable',
-      '**OBSOLETED** suppress "Item_State" and "SharedVariable" categories'
+      '**OBSOLETED** suppress "Item_State" and "SharedVariable" categories',
     )
     .option('-I, --include-text <text>', 'specify the text to include')
     .option('-X, --exclude-text <text>', 'specify the text to exclude')
@@ -198,7 +198,7 @@ export const makeProgramOptions = (argv: Array<string>): ProgramOptions => {
   const logFormatter = selectOutputFormatter(
     typeof opts.format === 'string'
       ? opts.format.toLowerCase()
-      : OutputFormat.Default
+      : OutputFormat.Default,
   );
 
   const condition = buildConditionalExpression(cmd);

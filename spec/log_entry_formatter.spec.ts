@@ -34,10 +34,10 @@ describe('vle formatter', () => {
           ...prev,
           [key, String(curr)] as [string, string],
         ],
-        e
+        e,
       ),
       [],
-      [FieldKey.Message, FieldKey.Category, FieldKey.LogLevel, '_UNKNOWN_KEY_']
+      [FieldKey.Message, FieldKey.Category, FieldKey.LogLevel, '_UNKNOWN_KEY_'],
     );
 
     assert.deepStrictEqual(r, [
@@ -55,7 +55,7 @@ describe('vle formatter', () => {
 
     assert.strictEqual(
       consoleStyledDefaultTextFormatter(e),
-      chalk.whiteBright.bgRed('Fatal')
+      chalk.whiteBright.bgRed('Fatal'),
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));
@@ -92,7 +92,7 @@ describe('vle formatter', () => {
     assert.isTrue(timeFormatPattern.test(dt));
     assert.strictEqual(
       dt.substring(timeFormatLength),
-      ' | Error | Item_ScriptError | bar_name | foo_msg'
+      ' | Error | Item_ScriptError | bar_name | foo_msg',
     );
 
     const cdt = consoleStyledDefaultTextFormatter(e);
@@ -100,8 +100,8 @@ describe('vle formatter', () => {
     assert.strictEqual(
       cdt.substring(timeFormatLength),
       ` | ${chalk.whiteBright.bgRed(
-        'Error'
-      )} | Item_ScriptError | bar_name | foo_msg`
+        'Error',
+      )} | Item_ScriptError | bar_name | foo_msg`,
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));
@@ -160,7 +160,7 @@ describe('vle formatter', () => {
 
     assert.strictEqual(
       consoleStyledDefaultTextFormatter(e),
-      `${chalk.black.bgYellowBright('Warning')} | bar_name | w_msg`
+      `${chalk.black.bgYellowBright('Warning')} | bar_name | w_msg`,
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));
@@ -193,7 +193,7 @@ describe('vle formatter', () => {
 
     assert.strictEqual(
       consoleStyledDefaultTextFormatter(e),
-      `${chalk.black.bgGreenBright('Info')} | foo_msg`
+      `${chalk.black.bgGreenBright('Info')} | foo_msg`,
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));
@@ -229,7 +229,7 @@ describe('vle formatter', () => {
 
     assert.strictEqual(
       consoleStyledDefaultTextFormatter(e),
-      defaultTextFormatter(e)
+      defaultTextFormatter(e),
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));
@@ -264,7 +264,7 @@ describe('vle formatter', () => {
 
     assert.strictEqual(
       consoleStyledDefaultTextFormatter(e),
-      defaultTextFormatter(e)
+      defaultTextFormatter(e),
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));
@@ -292,14 +292,14 @@ describe('vle formatter', () => {
         Message: '[TRAce] tr_msg',
         VciId: '12345678abcd1234abcd1234567890ab',
       },
-      '12345678'
+      '12345678',
     );
 
     assert.strictEqual(defaultTextFormatter(e), 'Trace | 12345678 |  tr_msg');
 
     assert.strictEqual(
       consoleStyledDefaultTextFormatter(e),
-      defaultTextFormatter(e)
+      defaultTextFormatter(e),
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));
@@ -330,12 +330,12 @@ describe('vle formatter', () => {
 
     assert.strictEqual(
       defaultTextFormatter(e),
-      'Trace | 12345678abcd1234abcd1234567890ab |  tr_msg'
+      'Trace | 12345678abcd1234abcd1234567890ab |  tr_msg',
     );
 
     assert.strictEqual(
       consoleStyledDefaultTextFormatter(e),
-      defaultTextFormatter(e)
+      defaultTextFormatter(e),
     );
 
     const [ft, ft_time] = parseFullText(fullTextFormatter(e));

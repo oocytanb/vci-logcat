@@ -10,7 +10,7 @@ export const leadingVciId = (vciId: string): string => {
 
 export const simplifyVciId = (
   vciId: string,
-  idMap: VciIdMap
+  idMap: VciIdMap,
 ): [string, VciIdMap] => {
   const shortId = leadingVciId(vciId);
   const prev = idMap.get(shortId);
@@ -97,7 +97,7 @@ export const roundLogLevel = (level: number): LogLevel =>
   Number.isFinite(level)
     ? (Math.min(
         Math.max(LogLevel.Fatal, Math.ceil(level / 100) * 100),
-        LogLevel.Trace
+        LogLevel.Trace,
       ) as LogLevel)
     : LogLevel.Trace;
 
@@ -115,7 +115,7 @@ const parseUnixTime = (str: string): Date => {
 
 const parseMessageLogLevel = (
   defaultLogLevel: number,
-  str: string
+  str: string,
 ): [number, string] => {
   const rePiped = /^([a-zA-Z]+)\s?\|\s?/;
   const reBracketed = /^\[([a-zA-Z]+)\]/;
@@ -156,7 +156,7 @@ export interface Entry {
 export const make = (
   kind: EntryKind,
   fields?: Readonly<Fields>,
-  simpleVciId?: string
+  simpleVciId?: string,
 ): Entry => {
   const mFields = Object.assign({}, fields);
 
@@ -193,7 +193,7 @@ export const make = (
 const makeFromFields = (
   kind: EntryKind,
   fields: Fields,
-  idMap: VciIdMap
+  idMap: VciIdMap,
 ): [Entry, VciIdMap] => {
   const vciId_ = fields[FieldKey.VciId];
   const [simpleVciId, newIdMap] =
@@ -204,7 +204,7 @@ const makeFromFields = (
 export const fromText = (
   kind: EntryKind,
   logLevel: number,
-  text: string
+  text: string,
 ): Entry =>
   make(kind, {
     LogLevel: logLevelToLabel(logLevel),
@@ -216,25 +216,28 @@ const fieldMapper = (v: unknown, k: string) =>
     ? parseMessageField(v)
     : String(v);
 
-const parseFields = (fieldsNode: unknown, idMap: VciIdMap): [Entry, VciIdMap] =>
+const parseFields = (
+  fieldsNode: unknown,
+  idMap: VciIdMap,
+): [Entry, VciIdMap] =>
   R.is(Object, fieldsNode)
     ? makeFromFields(
         EntryKind.Logger,
         R.mapObjIndexed(fieldMapper, fieldsNode as Record<string, unknown>),
-        idMap
+        idMap,
       )
     : [
         fromText(
           EntryKind.Notification,
           LogLevel.Error,
-          EntryMessage.UnsupportedDataFormat
+          EntryMessage.UnsupportedDataFormat,
         ),
         idMap,
       ];
 
 export const fromStructure2 = (
   data: unknown,
-  idMap: VciIdMap
+  idMap: VciIdMap,
 ): [Entry, VciIdMap] =>
   Array.isArray(data) &&
   data.length >= 3 &&
@@ -246,7 +249,7 @@ export const fromStructure2 = (
         fromText(
           EntryKind.Notification,
           LogLevel.Error,
-          EntryMessage.UnsupportedDataFormat
+          EntryMessage.UnsupportedDataFormat,
         ),
         idMap,
       ];
@@ -269,7 +272,7 @@ const immediateFieldMap: Readonly<
 
 export const fieldText = (
   fieldKey: FieldKey | string,
-  entry: Entry
+  entry: Entry,
 ): string | undefined =>
   fieldKey === FieldKey.LogLevel || fieldKey in entry.fields
     ? immediateFieldMap[fieldKey as FieldKey]?.(entry) ?? entry.fields[fieldKey]
@@ -278,5 +281,5 @@ export const fieldText = (
 export const fieldTextOr = (
   defaultValue: string,
   fieldKey: FieldKey | string,
-  entry: Entry
+  entry: Entry,
 ): string => fieldText(fieldKey, entry) ?? defaultValue;

@@ -39,7 +39,7 @@ describe('log_socket_data', () => {
     assert.strictEqual(e.logLevel, LogLevel.Error);
     assert.strictEqual(
       e.message,
-      `${EntryMessage.UnsupportedDataFormat} number`
+      `${EntryMessage.UnsupportedDataFormat} number`,
     );
   });
 
@@ -65,7 +65,7 @@ describe('log_socket_data', () => {
           },
         ],
       ],
-      codec_options
+      codec_options,
     );
 
     const e = parseLogEntry(d);

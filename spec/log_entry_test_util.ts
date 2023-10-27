@@ -11,7 +11,7 @@ export const timeFormatPattern = /^\d{2}:\d{2}:\d{2}/;
 export const timeFormatLength = 8;
 
 export const parseFullText = (
-  text: string
+  text: string,
 ): [Record<string, string>, string | undefined] => {
   const obj = R.fromPairs(
     text.split(' | ').map((val) => {
@@ -19,7 +19,7 @@ export const parseFullText = (
       return idx >= 0
         ? [val.substring(0, idx), val.substring(idx + 3)]
         : ['', val];
-    })
+    }),
   );
 
   return [R.dissoc(FieldKey.UnixTime, obj), obj[FieldKey.UnixTime]];

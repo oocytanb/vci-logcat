@@ -16,7 +16,7 @@ export type Sinks = {
 
 export const app = ({ props, vciLog }: Sources): Sinks => {
   const request$ = props.map(
-    (po): vls.SocketRequest => vls.makeConnectRequest(po.url)
+    (po): vls.SocketRequest => vls.makeConnectRequest(po.url),
   );
 
   const outputDataMapper =
@@ -27,7 +27,7 @@ export const app = ({ props, vciLog }: Sources): Sinks => {
     .map((po) =>
       vciLog
         .filter((entry) => po.condition.evaluate(entry))
-        .map(outputDataMapper(po.logFormatter))
+        .map(outputDataMapper(po.logFormatter)),
     )
     .flatten()
     .remember();

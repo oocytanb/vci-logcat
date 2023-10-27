@@ -30,7 +30,7 @@ type TextTester = (str: string) => boolean;
 
 const fieldTextEvaluator = (
   fieldTester: TextTester,
-  fieldKeys: ReadonlyArray<vle.FieldKey>
+  fieldKeys: ReadonlyArray<vle.FieldKey>,
 ) => {
   return (entry: vle.Entry) =>
     R.any((key) => {
@@ -100,7 +100,7 @@ class AndCondition implements Condition {
       (acc: boolean, _: Condition) => acc,
       (acc: boolean, elem: Condition) => acc && elem.evaluate(entry),
       this.first.evaluate(entry),
-      this.rest
+      this.rest,
     );
   }
 }
@@ -124,7 +124,7 @@ class OrCondition implements Condition {
       (acc: boolean, _: Condition) => !acc,
       (acc: boolean, elem: Condition) => acc || elem.evaluate(entry),
       this.first.evaluate(entry),
-      this.rest
+      this.rest,
     );
   }
 }
@@ -194,14 +194,14 @@ class FieldTextCondition implements Condition {
 
 const conditionKindIsAny = R.compose(
   R.equals<ConditionKind>(ConditionKind.Any),
-  R.view(R.lensProp<Condition, 'kind'>('kind'))
+  R.view(R.lensProp<Condition, 'kind'>('kind')),
 );
 
 const conditionKindIsNotAny = R.compose(R.not, conditionKindIsAny);
 
 const conditionKindIsNever = R.compose(
   R.equals<ConditionKind>(ConditionKind.Never),
-  R.view(R.lensProp<Condition, 'kind'>('kind'))
+  R.view(R.lensProp<Condition, 'kind'>('kind')),
 );
 
 const conditionKindIsNotNever = R.compose(R.not, conditionKindIsNever);
@@ -234,7 +234,7 @@ export const andCondition = (
 ): Condition => {
   const ls = R.chain(
     (elem) => (elem instanceof AndCondition ? elem.children : [elem]),
-    [first, ...rest]
+    [first, ...rest],
   ).filter(conditionKindIsNotAny);
 
   if (R.any(conditionKindIsNever, ls)) {
@@ -256,7 +256,7 @@ export const orCondition = (
 ): Condition => {
   const ls = R.chain(
     (elem) => (elem instanceof OrCondition ? elem.children : [elem]),
-    [first, ...rest]
+    [first, ...rest],
   ).filter(conditionKindIsNotNever);
 
   if (R.any(conditionKindIsAny, ls)) {
@@ -281,57 +281,57 @@ export const categoryCondition = (category: vle.Category): Condition =>
 const fieldEqualConditionM = (
   mapper: TextMapper,
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  search: string
+  search: string,
 ): Condition => {
   const ms = mapper(search);
   const tester = (str: string) => str === ms;
   return new FieldTextCondition(
     ConditionKind.FieldEqual,
-    fieldTextEvaluator(R.compose(tester, mapper), fieldKeys)
+    fieldTextEvaluator(R.compose(tester, mapper), fieldKeys),
   );
 };
 
 export const fieldEqualCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  search: string
+  search: string,
 ): Condition => fieldEqualConditionM(R.toLower, fieldKeys, search);
 
 export const caseSensitiveFieldEqualCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  search: string
+  search: string,
 ): Condition => fieldEqualConditionM(R.identity, fieldKeys, search);
 
 const fieldIncludeConditionM = (
   mapper: TextMapper,
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  search: string
+  search: string,
 ): Condition => {
   const ms = mapper(search);
   const tester = (str: string) => str.includes(ms);
   return new FieldTextCondition(
     ConditionKind.FieldInclude,
-    fieldTextEvaluator(R.compose(tester, mapper), fieldKeys)
+    fieldTextEvaluator(R.compose(tester, mapper), fieldKeys),
   );
 };
 
 export const fieldIncludeCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  search: string
+  search: string,
 ): Condition => fieldIncludeConditionM(R.toLower, fieldKeys, search);
 
 export const caseSensitiveFieldIncludeCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  search: string
+  search: string,
 ): Condition => fieldIncludeConditionM(R.identity, fieldKeys, search);
 
 export const fieldMatchCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  pattern: RegExp
+  pattern: RegExp,
 ): Condition => {
   const tester = (str: string) => pattern.test(str);
   return new FieldTextCondition(
     ConditionKind.FieldMatch,
-    fieldTextEvaluator(tester, fieldKeys)
+    fieldTextEvaluator(tester, fieldKeys),
   );
 };
 
@@ -339,7 +339,7 @@ const fallbackFieldMatchConditionM = (
   mapper: TextMapper,
   fieldKeys: ReadonlyArray<vle.FieldKey>,
   patternText: string,
-  patternFlags: string
+  patternFlags: string,
 ): Condition => {
   try {
     const pattern = new RegExp(patternText, patternFlags);
@@ -351,12 +351,12 @@ const fallbackFieldMatchConditionM = (
 
 export const fallbackFieldMatchCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  patternText: string
+  patternText: string,
 ): Condition =>
   fallbackFieldMatchConditionM(R.toLower, fieldKeys, patternText, 'i');
 
 export const caseSensitiveFallbackFieldMatchCondition = (
   fieldKeys: ReadonlyArray<vle.FieldKey>,
-  patternText: string
+  patternText: string,
 ): Condition =>
   fallbackFieldMatchConditionM(R.identity, fieldKeys, patternText, '');

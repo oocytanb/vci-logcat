@@ -84,7 +84,7 @@ describe('program_options', () => {
     assert.isTrue(condition.evaluate(e4));
     assert.strictEqual(
       logFormatter(e4),
-      `${chalk.black.bgYellowBright('Warning')} |  | frame: script not return`
+      `${chalk.black.bgYellowBright('Warning')} |  | frame: script not return`,
     );
 
     const e5 = make(EntryKind.Logger, {
@@ -102,7 +102,7 @@ describe('program_options', () => {
     assert.isTrue(condition.evaluate(e6));
     assert.strictEqual(
       logFormatter(e6),
-      `${chalk.black.bgGreenBright('Info')} | SharedVariable | {studio.shared}`
+      `${chalk.black.bgGreenBright('Info')} | SharedVariable | {studio.shared}`,
     );
 
     const e7 = make(EntryKind.Logger, {
@@ -123,8 +123,8 @@ describe('program_options', () => {
         '-c',
         '192.168.0.1:80',
         '-f',
-        'full_text'
-      )
+        'full_text',
+      ),
     );
 
     assert.strictEqual(url, '192.168.0.1:80');
@@ -249,8 +249,8 @@ describe('program_options', () => {
         '-c',
         '',
         '-f',
-        'json_record'
-      )
+        'json_record',
+      ),
     );
 
     assert.strictEqual(url, '');
@@ -398,8 +398,8 @@ describe('program_options', () => {
         'PIYO|FUGA',
         '-r',
         '-A',
-        '--output-system-status'
-      )
+        '--output-system-status',
+      ),
     );
 
     assert.deepStrictEqual(ckNode(condition), {

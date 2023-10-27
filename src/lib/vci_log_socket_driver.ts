@@ -20,8 +20,8 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
     vle.fromText(
       vle.EntryKind.Notification,
       vle.LogLevel.Info,
-      `${SocketMessage.Connecting}... [${loggerAddress}]`
-    )
+      `${SocketMessage.Connecting}... [${loggerAddress}]`,
+    ),
   );
 
   let alreadyClosed = false;
@@ -36,8 +36,8 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
         vle.fromText(
           vle.EntryKind.Notification,
           vle.LogLevel.Info,
-          SocketMessage.Disconnected
-        )
+          SocketMessage.Disconnected,
+        ),
       );
 
       sock.close();
@@ -49,8 +49,8 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
       vle.fromText(
         vle.EntryKind.Notification,
         vle.LogLevel.Info,
-        SocketMessage.Connected
-      )
+        SocketMessage.Connected,
+      ),
     );
   };
 
@@ -62,7 +62,7 @@ const makeSocket = (url: string, listener: Listener<vle.Entry>) => {
     const msg =
       SocketMessage.Error + (event.message ? `[${event.message}]` : '');
     listener.next(
-      vle.fromText(vle.EntryKind.Notification, vle.LogLevel.Error, msg)
+      vle.fromText(vle.EntryKind.Notification, vle.LogLevel.Error, msg),
     );
   };
 
@@ -99,8 +99,8 @@ const model = (request$: xs<SocketRequest>) => {
                   vle.fromText(
                     vle.EntryKind.Notification,
                     vle.LogLevel.Error,
-                    `${SocketMessage.Error}[${err}]`
-                  )
+                    `${SocketMessage.Error}[${err}]`,
+                  ),
                 );
               }
               break;

@@ -2,7 +2,7 @@
   "private": true,
   "name": "vci-logcat",
   "description": "VCI logcat",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "author": "oO",
   "license": "MIT",
   "repository": {
@@ -13,7 +13,7 @@
   "main": "bin/lib/index.js",
   "types": "bin/lib/index.d.ts",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "pkg": {
     "scripts": "bin/**/*.js",
@@ -32,7 +32,7 @@
     "retail": "node ./bin/vci-logcat",
     "coverage": "nyc npm run test",
     "coverage:clean": "rimraf .nyc_output coverage",
-    "clean": "rimraf ./bin/*/ && rimraf ./dist && npm run coverage:clean",
+    "clean": "rimraf --glob ./bin/*/ && rimraf ./dist && npm run coverage:clean",
     "build:package_info": "ts-node ./build_scripts/generate_package_info.ts",
     "build": "npm run build:package_info && npm run lint:fix && npm run clean && tsc",
     "pack:d": "npm pack --dry-run"
@@ -42,29 +42,29 @@
     "@types/chai": "^4.3.1",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.11.18",
-    "@typescript-eslint/eslint-plugin": "^5.30.7",
-    "@typescript-eslint/parser": "^5.30.7",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
     "chai": "^4.3.6",
     "eslint": "^8.20.0",
-    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-prettier": "^9.0.0",
     "nyc": "^15.1.0",
-    "prettier": "^2.7.1",
-    "rimraf": "^3.0.2",
+    "prettier": "^3.0.3",
+    "rimraf": "^5.0.5",
     "ts-node": "^10.9.1",
-    "typescript": "^4.7.4"
+    "typescript": "^5.2.2"
   },
   "dependencies": {
     "@cycle/run": "^5.7.0",
     "@types/msgpack-lite": "^0.1.8",
-    "@types/ramda": "^0.28.15",
+    "@types/ramda": "^0.29.7",
     "@types/ws": "^8.5.3",
     "chalk": "^4.1.2",
-    "commander": "^9.4.0",
+    "commander": "^11.1.0",
     "isomorphic-ws": "^5.0.0",
     "mocha": "^10.0.0",
     "moment": "^2.29.4",
     "msgpack-lite": "^0.1.26",
-    "ramda": "^0.28.0",
+    "ramda": "^0.29.1",
     "ws": "^8.8.1",
     "xstream": "^11.14.0"
   },

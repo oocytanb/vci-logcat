@@ -15,7 +15,7 @@ describe('cli_app', () => {
       vle.fromText(
         vle.EntryKind.Notification,
         vle.LogLevel.Trace,
-        'notify qux'
+        'notify qux',
       ),
       vle.fromText(vle.EntryKind.Logger, vle.LogLevel.Debug, 'foo msg'),
       vle.fromText(vle.EntryKind.Logger, vle.LogLevel.Debug, 'qux msg'),

@@ -65,8 +65,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           Category: Category.System,
           Message: 'frame: script not return',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -74,8 +74,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           Category: Category.Item_Print,
           Message: 'frame: script not return',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -83,8 +83,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           Category: Category.System,
           Message: 'frame',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -152,7 +152,7 @@ describe('vle condition', () => {
     const c = andCondition(
       entryCondition(EntryKind.Text),
       categoryCondition(Category.Unknown),
-      anyCondition()
+      anyCondition(),
     );
 
     assert.deepStrictEqual(ckNode(c), {
@@ -171,10 +171,10 @@ describe('vle condition', () => {
 
     assert.isTrue(c.evaluate(make(EntryKind.Text)));
     assert.isFalse(
-      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print }))
+      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print })),
     );
     assert.isFalse(
-      c.evaluate(make(EntryKind.Logger, { Category: Category.Unknown }))
+      c.evaluate(make(EntryKind.Logger, { Category: Category.Unknown })),
     );
   });
 
@@ -182,7 +182,7 @@ describe('vle condition', () => {
     const c = andCondition(
       anyCondition(),
       entryCondition(EntryKind.Text),
-      anyCondition()
+      anyCondition(),
     );
 
     assert.deepStrictEqual(ckNode(c), {
@@ -214,9 +214,9 @@ describe('vle condition', () => {
       entryCondition(EntryKind.Text),
       andCondition(
         categoryCondition(Category.Unknown),
-        notCondition(entryCondition(EntryKind.Notification))
+        notCondition(entryCondition(EntryKind.Notification)),
       ),
-      anyCondition()
+      anyCondition(),
     );
 
     assert.deepStrictEqual(ckNode(c), {
@@ -244,7 +244,7 @@ describe('vle condition', () => {
 
     assert.isTrue(c.evaluate(make(EntryKind.Text)));
     assert.isFalse(
-      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print }))
+      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print })),
     );
   });
 
@@ -252,7 +252,7 @@ describe('vle condition', () => {
     const c = orCondition(
       entryCondition(EntryKind.Text),
       categoryCondition(Category.Unknown),
-      neverCondition()
+      neverCondition(),
     );
 
     assert.deepStrictEqual(ckNode(c), {
@@ -271,10 +271,10 @@ describe('vle condition', () => {
 
     assert.isTrue(c.evaluate(make(EntryKind.Text)));
     assert.isTrue(
-      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print }))
+      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print })),
     );
     assert.isTrue(
-      c.evaluate(make(EntryKind.Logger, { Category: Category.Unknown }))
+      c.evaluate(make(EntryKind.Logger, { Category: Category.Unknown })),
     );
   });
 
@@ -282,7 +282,7 @@ describe('vle condition', () => {
     const c = orCondition(
       anyCondition(),
       entryCondition(EntryKind.Text),
-      anyCondition()
+      anyCondition(),
     );
 
     assert.deepStrictEqual(ckNode(c), {
@@ -314,9 +314,9 @@ describe('vle condition', () => {
       entryCondition(EntryKind.Text),
       orCondition(
         categoryCondition(Category.Unknown),
-        notCondition(entryCondition(EntryKind.Notification))
+        notCondition(entryCondition(EntryKind.Notification)),
       ),
-      neverCondition()
+      neverCondition(),
     );
 
     assert.deepStrictEqual(ckNode(c), {
@@ -344,15 +344,15 @@ describe('vle condition', () => {
 
     assert.isTrue(c.evaluate(make(EntryKind.Text)));
     assert.isTrue(
-      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print }))
+      c.evaluate(make(EntryKind.Text, { Category: Category.Item_Print })),
     );
     assert.isFalse(
       c.evaluate(
-        make(EntryKind.Notification, { Category: Category.Item_Print })
-      )
+        make(EntryKind.Notification, { Category: Category.Item_Print }),
+      ),
     );
     assert.isTrue(
-      c.evaluate(make(EntryKind.Notification, { Category: Category.Unknown }))
+      c.evaluate(make(EntryKind.Notification, { Category: Category.Unknown })),
     );
   });
 
@@ -364,7 +364,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      'debug'
+      'debug',
     );
 
     assert.isTrue(c.evaluate(make(EntryKind.Logger)));
@@ -374,8 +374,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           CallerFile: 'DEBUG',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -384,8 +384,8 @@ describe('vle condition', () => {
           LogLevel: 'Fatal',
           Message: 'debug baz',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isTrue(
@@ -396,8 +396,8 @@ describe('vle condition', () => {
           Message: 'debug baz',
           CallerFile: 'DEBUG',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -409,7 +409,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      'debug'
+      'debug',
     );
 
     assert.isFalse(c.evaluate(make(EntryKind.Logger)));
@@ -419,8 +419,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: 'debug',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -428,8 +428,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           CallerFile: 'DEBUG',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -438,8 +438,8 @@ describe('vle condition', () => {
           LogLevel: 'Fatal',
           Message: 'debug baz',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -450,8 +450,8 @@ describe('vle condition', () => {
           Message: 'debug baz',
           CallerFile: 'DEBUG',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -463,7 +463,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      'debug'
+      'debug',
     );
 
     assert.isTrue(c.evaluate(make(EntryKind.Logger)));
@@ -473,8 +473,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           CallerFile: 'fooDEBUGbaz',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -483,8 +483,8 @@ describe('vle condition', () => {
           LogLevel: 'Fatal',
           Message: 'deaz',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -496,7 +496,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      'debug'
+      'debug',
     );
 
     assert.isFalse(c.evaluate(make(EntryKind.Logger)));
@@ -506,8 +506,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           CallerFile: 'fooDEBUGbaz',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isTrue(
@@ -515,8 +515,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: 'foodebugbaz',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -525,8 +525,8 @@ describe('vle condition', () => {
           LogLevel: 'Fatal',
           Message: 'deaz',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -538,7 +538,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      /debug$/
+      /debug$/,
     );
 
     assert.isFalse(c.evaluate(make(EntryKind.Logger)));
@@ -548,8 +548,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           CallerFile: 'fooDEBUG',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isTrue(
@@ -557,8 +557,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: 'FOOdebug',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -567,8 +567,8 @@ describe('vle condition', () => {
           LogLevel: 'Fatal',
           Message: 'debug ',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -580,7 +580,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      'debug$'
+      'debug$',
     );
 
     assert.isTrue(c.evaluate(make(EntryKind.Logger)));
@@ -590,8 +590,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           CallerFile: 'fooDEBUG',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -600,8 +600,8 @@ describe('vle condition', () => {
           LogLevel: 'Fatal',
           Message: 'debug ',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -613,7 +613,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      '*pt*'
+      '*pt*',
     );
 
     assert.isFalse(c.evaluate(make(EntryKind.Logger)));
@@ -623,8 +623,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: 'foo *PT* bar',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -632,8 +632,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: '*PTT*',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -645,7 +645,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      'debug$'
+      'debug$',
     );
 
     assert.isFalse(c.evaluate(make(EntryKind.Logger)));
@@ -655,8 +655,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           CallerFile: 'fooDEBUG',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isTrue(
@@ -664,8 +664,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: 'FOOdebug',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -674,8 +674,8 @@ describe('vle condition', () => {
           LogLevel: 'Fatal',
           Message: 'debug ',
           Item: 'debug',
-        })
-      )
+        }),
+      ),
     );
   });
 
@@ -687,7 +687,7 @@ describe('vle condition', () => {
         FieldKey.Message,
         FieldKey.CallerFile,
       ],
-      '*pt*'
+      '*pt*',
     );
 
     assert.isFalse(c.evaluate(make(EntryKind.Logger)));
@@ -697,8 +697,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: 'foo *pt* bar',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -706,8 +706,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: 'foo *PT* bar',
-        })
-      )
+        }),
+      ),
     );
 
     assert.isFalse(
@@ -715,8 +715,8 @@ describe('vle condition', () => {
         make(EntryKind.Logger, {
           LogLevel: 'Fatal',
           Message: '*ptt*',
-        })
-      )
+        }),
+      ),
     );
   });
 });
